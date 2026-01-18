@@ -1,0 +1,29 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Simulator.Client.Services.Authentications
+@using Simulator.Client.Services.Identities.Accounts
+@using Simulator.Client.Services.Identities.Authentications
+@using Simulator.Client.Services.Identities.Users
+@using Simulator.Client.Services.Interceptor
+@using Simulator.Client.Services.Navigations
+@using Simulator.Client.Services.SnackBars
+<MudNavMenu Class="mud-width-full">
+
+    <MudDrawerHeader>
+        <MudText Typo="Typo.h6">Plant Simulator</MudText>
+    </MudDrawerHeader>
+    <AuthorizeView>
+
+        <MudNavLink Href="/" Icon="@Icons.Material.Outlined.Home">Process</MudNavLink>
+        <MudNavLink Href="/Materials" Icon="@Icons.Material.Outlined.Animation">Materials</MudNavLink>
+        <MudNavLink Href="/Skus" Icon="@Icons.Material.Outlined.Business">SKUs</MudNavLink>
+        <MudNavLink Href="/Washouts" Icon="@Icons.Material.Outlined.CleaningServices">Washouts</MudNavLink>
+        <MudNavLink Href="/compounds" Icon="@Icons.Material.Outlined.IncompleteCircle">Compunds</MudNavLink>
+        <MudNavLink Href="/steam" Icon="@Icons.Material.Outlined.HeatPump">Steam</MudNavLink>
+    </AuthorizeView>
+
+
+</MudNavMenu>
+
+@code {
+
+}

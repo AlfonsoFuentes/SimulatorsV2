@@ -1,0 +1,35 @@
+﻿@page "/compounds"
+@using Simulator.Shared.NewModels.Compounds
+
+<TableTemplate TValue="NewCompoundPropertyDTO"
+               AddNew="AddNew"
+               @bind-NameFilter=@nameFilter
+            
+               Items="FilteredItems"
+               @bind-SelectedItems=@SelecteItems
+               TableTitle="CompoundPropertys List">
+    <ColumnsTemplate>
+        <SelectColumn T="NewCompoundPropertyDTO" />
+
+        <PropertyColumn Property="x => x.Name" Title="Name" TProperty="string" T="NewCompoundPropertyDTO" />
+        <PropertyColumn Property="x => x.Formula" Title="Formula" TProperty="string" T="NewCompoundPropertyDTO" />
+        <PropertyColumn Property="x => x.StructuralFormula" Title="Structural Formula" TProperty="string" T="NewCompoundPropertyDTO"  />
+        <PropertyColumn Property="x => x.MolecularWeight" Title="PM" TProperty="double" T="NewCompoundPropertyDTO" />
+        <PropertyColumn Property="x => x.MainFamily" Title="Main Family" TProperty="string" T="NewCompoundPropertyDTO" />
+        <PropertyColumn Property="x => x.SecondaryFamily" Title="Secondary Family" TProperty="string" T="NewCompoundPropertyDTO" />
+       
+        <TemplateColumn CellClass="d-flex justify-end" T="NewCompoundPropertyDTO">
+            <CellTemplate Context="template">
+                <MudStack Row=true Spacing="2">
+                    <IconButton ToolTip="@($"Edit {template.Item.Name}")" Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Variant=Variant.Outlined OnClick="@(() => Edit(template.Item))" />
+                    <IconButton ToolTip="@($"Delete {template.Item.Name}")" Size="@Size.Small" Icon="@Icons.Material.Outlined.Delete" Variant=Variant.Outlined Color="Color.Surface" OnClick="@(() => Delete(template.Item))" />
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+
+    </ColumnsTemplate>
+</TableTemplate>
+
+@code {
+
+}

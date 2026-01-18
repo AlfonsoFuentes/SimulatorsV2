@@ -1,0 +1,17 @@
+﻿@* <MudStack Row=true Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="p-0">
+
+    <MudText Typo="Typo.button">@Label</MudText>
+    <MudText Typo="Typo.body2"><strong>@Value</strong></MudText>
+
+</MudStack> *@
+<MudGrid Justify="Justify.SpaceBetween" >
+    <MudItem xs="12" sm="6"><MudText Typo="Typo.caption" Inline=true GutterBottom=true Align="Align.Start">@Label</MudText></MudItem>
+    <MudItem xs="12" sm="6"> <MudText Typo="Typo.body2"><strong>@Value</strong></MudText></MudItem>
+</MudGrid>
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+  
+}

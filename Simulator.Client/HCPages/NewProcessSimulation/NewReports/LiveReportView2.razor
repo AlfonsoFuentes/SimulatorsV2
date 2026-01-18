@@ -1,0 +1,104 @@
+﻿@using System
+@using System.Linq
+@using Simulator.Shared.NuevaSimlationconQwen
+@using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
+@using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
+@using static Simulator.Client.HCPages.MainProcesses.Process.SimulationTabs
+
+
+
+<!-- Layout de reporte (FUERA del MudStack para evitar problemas de flex) -->
+<div class="live-report-v2">
+    <!-- Columna 1: Operarios y Tanques MP (25%) -->
+    <div class="col-1 report-col">
+        <h3 class="report-title">Manufacture Feeder</h3>
+        @foreach (var item in Column1Items)
+        {
+            <div class="report-card" @key="@($"col1-{item.Id}")">
+                @foreach (var field in item.Items)
+                {
+                    <div style="color: @field.Style.Color; font-weight: @field.Style.FontEmphasis;">
+                        <strong>@field.Label:</strong> @field.Value
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Columna 2: SKIDs y Mezcladores (25%) -->
+    <div class="col-2 report-col">
+        <h3 class="report-title">Manufacturers</h3>
+        @foreach (var item in Column2Items)
+        {
+            <div class="report-card" @key="@($"col2-{item.Id}")">
+                @foreach (var field in item.Items)
+                {
+                    <div style="color: @field.Style.Color; font-weight: @field.Style.FontEmphasis;">
+                        <strong>@field.Label:</strong> @field.Value
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+
+    <!-- Columna 3: WIP + Líneas (50%) -->
+    <div class="col-3">
+        <!-- Columna 3: WIP + Líneas (50%) -->
+        <div class="col-3 report-col">
+            <h3 class="report-title">WIP tanks & Lines</h3>
+            @for (int i = 0; i < FlatRows.Count; i++)
+            {
+                var row = FlatRows[i];
+                <div class="wip-line-row" @key="@($"row-{i}")">
+                    <!-- WIP -->
+                    @if (row.Wip != null)
+                    {
+                        <div class="wip-cell">
+                            <div class="report-card" @key="@($"wip-{row.Wip.Id}")">
+                                @foreach (var field in row.Wip.Items)
+                                {
+                                    <div style="color: @field.Style.Color; font-weight: @field.Style.FontEmphasis;">
+                                        <strong>@field.Label:</strong> @field.Value
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="wip-cell empty"></div>
+                    }
+
+                    <!-- Línea -->
+                    @if (row.Line != null)
+                    {
+                        <div class="line-cell">
+                            <div class="report-card" @key="@($"line-{row.Line.Id}")">
+                                @foreach (var field in row.Line.Items)
+                                {
+                                    <div style="color: @field.Style.Color; font-weight: @field.Style.FontEmphasis;">
+                                        <strong>@field.Label:</strong> @field.Value
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="line-cell empty"></div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<LiveReportableWrapper> Column1Items { get; set; } = new();
+    [Parameter]
+    public List<LiveReportableWrapper> Column2Items { get; set; } = new();
+    [Parameter]
+    public List<FlatRow> FlatRows { get; set; } = new(); // ← Reemplaza LineDisplayItems
+}

@@ -1,0 +1,47 @@
+﻿@using Simulator.Client.HCPages.PlannedSKUs
+@using Simulator.Client.HCPages.PreferedMixers
+
+
+
+
+
+<EditForm Model="@Model" OnValidSubmit="Submit">
+    <MudCard>
+        <MudCardContent>
+
+            <FluentValidationValidator @ref="_fluentValidationValidator" />
+
+            <Autocomplete Label="Selected Line"
+                          @bind-Value=@Model.LineDTO
+                          For="() => Model.LineDTO"
+                          ValidateAsync="ValidateAsync"
+                          ToStringFunc="@(e => e == null ? null : $"{e.Name} ")"
+                          SearchFunc="SearchLine"></Autocomplete>
+
+            <Select For="() => Model.ShiftType" @bind-Value="Model.ShiftType"
+                    Label="Schedule Shifts" Items="Enum.GetValues<ShiftType>().ToList()" ValidateAsync="ValidateAsync"></Select>
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-1">
+                <MudTabPanel Text="SKUs">
+                    <PlannedSKUTable @bind-Items=@Model.PlannedSKUDTOs LineId="@Model.LineId" LinePlannedId="@Model.Id" ValidateAsync="ValidateAsync"></PlannedSKUTable>
+                    <ValidationMessage For="() => Model.PlannedSKUDTOs.Count" style="color:red; font-size:x-small;" />
+                </MudTabPanel>
+                <MudTabPanel Text="Prefered Mixer">
+                    <PreferedMixerTable @bind-Items=@Model.PreferedMixerDTOs MainProcessId="@Model.MainProcesId" LinePlannedId="@Model.Id" ValidateAsync="ValidateAsync"></PreferedMixerTable>
+
+                </MudTabPanel>
+
+            </MudTabs>
+
+
+        </MudCardContent>
+        <MudCardActions>
+
+            <MudIconButton Icon="@Icons.Material.Filled.Cancel" OnClick="Cancel" Color="Color.Transparent" Variant="Variant.Outlined"></MudIconButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Save" Disabled=!Validated ButtonType="ButtonType.Submit" Variant="Variant.Outlined"></MudIconButton>
+
+        </MudCardActions>
+    </MudCard>
+</EditForm>
+@code {
+
+}
