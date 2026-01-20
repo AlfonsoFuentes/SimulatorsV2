@@ -53,10 +53,12 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
 
 
         }
-        public override void Run(DateTime currentdate)
+        public override void Report(DateTime currentdate)
         {
+            // Se registra como tiempo de espera de operario al inicio del lote
             Context.CurrentBatchReport?.RecordTime(MixerTimeType.TransferToWIP);
         }
+       
 
 
 

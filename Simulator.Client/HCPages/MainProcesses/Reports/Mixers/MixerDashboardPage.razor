@@ -1,0 +1,122 @@
+﻿@using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
+
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <div class="d-flex align-center justify-space-between mb-6">
+        <MudText Typo="Typo.h4">Global Mixer Time Distribution</MudText>
+
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.body2">Minutes</MudText>
+            <MudSwitch @bind-Value="_isPercentage" Color="Color.Primary" />
+            <MudText Typo="Typo.body2">Percentage (%)</MudText>
+        </MudStack>
+    </div>
+
+    <MudGrid>
+        @foreach (var mixer in AllMixers)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Class="pa-4 d-flex flex-column align-center" Elevation="3" Style="height: 100%; min-height: 450px;">
+                    <MudText Typo="Typo.h6" Align="Align.Center">@mixer.Name</MudText>
+                    <MudDivider Class="my-2" Style="width: 100%;" />
+
+                    @if (HasData(mixer))
+                    {
+                        <div class="flex-grow-1 d-flex align-center">
+                            <MudChart ChartType="ChartType.Pie"
+                                      InputData="@GetMixerData(mixer)"
+                                      InputLabels="@Labels"
+                                      Width="220px" Height="220px"
+                                      ChartOptions="@_options" />
+                        </div>
+
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-4 w-100">
+                            <div class="d-flex justify-space-between">
+                                <MudText Typo="Typo.caption">Total Simulation Time:</MudText>
+                                <MudText Typo="Typo.caption"><b>@GetTotalRealTime(mixer).ToString("0.##") min</b></MudText>
+                            </div>
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column align-center justify-center flex-grow-1">
+                            <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Default" Size="Size.Large" />
+                            <MudText Color="Color.Secondary" Class="mt-2">No batch data available</MudText>
+                        </div>
+                    }
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+
+    [Parameter] public GeneralSimulation Simulation { get; set; } = null!;
+
+
+
+    private IEnumerable<ProcessMixer> AllMixers =>
+        Simulation.Equipments
+                  .OfType<ProcessMixer>()
+                  .OrderBy(m => m.Name);
+    // Las etiquetas reflejan exactamente tus MixerTimeType de parada
+    private bool _isPercentage = false;
+
+    // Ahora incluimos todos los estados de tu Enum MixerTimeType
+    private string[] Labels = {
+        "Batching",
+        "Washing",
+        "Transfer to WIP",
+      
+        "Feeder Stop",
+        "Operator Stop",
+        "Washout Pump Stop",
+        "WIP Transfer Stop",
+        "Connecting WIP Stop"
+    };
+
+    private ChartOptions _options = new ChartOptions()
+    {
+        // Colores: Azules/Verdes para productivo, Rojos/Naranjas para paradas
+        ChartPalette = new[] {
+            "#2E7D32", "#43A047", "#81C784", // Productivos (Batch, Wash, Transfer)
+            "#FF7043", "#FFA726", "#EF5350", "#D32F2F", "#AB47BC", "#26A69A" // Paradas
+        },
+
+        ShowLegend = false // Oculta los nombres debajo del gráfico
+    };
+
+    private bool HasData(ProcessMixer mixer) =>
+        mixer.BatchReports.Any(r => r.RealBatchTime.Value > 0);
+
+    private double GetTotalRealTime(ProcessMixer mixer) =>
+        mixer.BatchReports.Sum(r => r.RealBatchTime.GetValue(TimeUnits.Minute));
+
+    private double[] GetMixerData(ProcessMixer mixer)
+    {
+        // Obtenemos todos los tiempos acumulados de los reportes
+        var rawData = new[]
+        {
+            mixer.BatchReports.Sum(r => r.BatchingTime.GetValue(TimeUnits.Minute)),
+            mixer.BatchReports.Sum(r => r.WashingTime.GetValue(TimeUnits.Minute)),
+            mixer.BatchReports.Sum(r => r.TransferingToWipTime.GetValue(TimeUnits.Minute)),
+
+            mixer.BatchReports.Sum(r => r.StarvedTimeByFeeder.GetValue(TimeUnits.Minute)),
+            mixer.BatchReports.Sum(r => r.StarvedTimeByOperator.GetValue(TimeUnits.Minute)),
+            mixer.BatchReports.Sum(r => r.StarvedTimeByWashoutPump.GetValue(TimeUnits.Minute)),
+            mixer.BatchReports.Sum(r => r.StarvedTimeTransferingToWip.GetValue(TimeUnits.Minute)),
+            mixer.BatchReports.Sum(r => r.StarvedTimeConnectingToWip.GetValue(TimeUnits.Minute))
+        };
+
+        if (!_isPercentage)
+        {
+            return rawData;
+        }
+
+        double total = rawData.Sum();
+        if (total <= 0) return rawData;
+
+        return rawData.Select(v => Math.Round((v / total) * 100, 1)).ToArray();
+    }
+}

@@ -1,0 +1,119 @@
+﻿@using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
+@* Pages/MixerMetricsReport.razor *@
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-4">Comprehensive Equipment Analytics</MudText>
+
+    <MudGrid>
+        <MudItem xs="12">
+            <MudTable Items="@StopRows" Hover="true" Elevation="3" Dense="true" FixedHeader="true" Height="550px">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Full Cycle Analysis (Minutes) - OEE Based on Batching</MudText>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Mixer Name</MudTh>
+                    @* Productive Time (Primary KPI) *@
+                    <MudTh Style="background-color: #e8f5e9;">Batching</MudTh>
+                    @* Support Activities *@
+                    <MudTh Style="background-color: #f5f5f5;">Washing</MudTh>
+                    <MudTh Style="background-color: #f5f5f5;">Transfer WIP</MudTh>
+                    @* All Starvation Breakdown *@
+
+                    <MudTh Style="background-color: #fff3e0;">Feeder</MudTh>
+                    <MudTh Style="background-color: #fff3e0;">Operator</MudTh>
+                    <MudTh Style="background-color: #fff3e0;">Pump</MudTh>
+                    <MudTh Style="background-color: #fff3e0;">WIP Stop</MudTh>
+                    <MudTh Style="background-color: #fff3e0;">Connect WIP</MudTh>
+                    @* Totals & Efficiency *@
+                    <MudTh Style="background-color: #fafafa;">Total Time</MudTh>
+                    <MudTh Style="background-color: #e3f2fd;"><b>Utilization %</b></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.MixerName</MudTd>
+                    @* Batching en negrita por ser el KPI principal *@
+                    <MudTd><MudText Color="Color.Success"><b>@context.Batching.ToString("0.##")</b></MudText></MudTd>
+                    <MudTd>@context.Washing.ToString("0.##")</MudTd>
+                    <MudTd>@context.TransferToWip.ToString("0.##")</MudTd>
+                    @* Detalle de Paradas *@
+
+                    <MudTd>@context.Feeder.ToString("0.##")</MudTd>
+                    <MudTd>@context.Operator.ToString("0.##")</MudTd>
+                    <MudTd>@context.WashoutPump.ToString("0.##")</MudTd>
+                    <MudTd>@context.WipTransferStop.ToString("0.##")</MudTd>
+                    <MudTd>@context.ConnectingWip.ToString("0.##")</MudTd>
+                    @* Totales *@
+                    <MudTd>@context.TotalRealTime.ToString("0.##")</MudTd>
+                    <MudTd>
+                        <MudProgressLinear Color="@GetEfficiencyColor(context.Utilization)" Value="@context.Utilization" Class="my-1" />
+                        <MudTooltip Text="Batching / Total Time">
+                            <MudText Typo="Typo.caption"><b>@context.Utilization.ToString("0.#")%</b></MudText>
+                        </MudTooltip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+
+
+
+@code {
+    [Parameter] public GeneralSimulation Simulation { get; set; } = null!;
+
+
+
+    private IEnumerable<ProcessMixer> AllMixers =>
+        Simulation.Equipments
+                  .OfType<ProcessMixer>()
+                  .OrderBy(m => m.Name);
+    private List<DetailedRow> StopRows => AllMixers.Select(m =>
+    {
+        double batching = m.BatchReports.Sum(r => r.BatchingTime.GetValue(TimeUnits.Minute));
+        double total = m.BatchReports.Sum(r => r.RealBatchTime.GetValue(TimeUnits.Minute));
+        double utilization = total > 0 ? (batching / total) * 100 : 0;
+
+        return new DetailedRow
+        {
+            MixerName = m.Name,
+            Batching = batching,
+            Washing = m.BatchReports.Sum(r => r.WashingTime.GetValue(TimeUnits.Minute)),
+            TransferToWip = m.BatchReports.Sum(r => r.TransferingToWipTime.GetValue(TimeUnits.Minute)),
+
+
+            Feeder = m.BatchReports.Sum(r => r.StarvedTimeByFeeder.GetValue(TimeUnits.Minute)),
+            Operator = m.BatchReports.Sum(r => r.StarvedTimeByOperator.GetValue(TimeUnits.Minute)),
+            WashoutPump = m.BatchReports.Sum(r => r.StarvedTimeByWashoutPump.GetValue(TimeUnits.Minute)),
+            WipTransferStop = m.BatchReports.Sum(r => r.StarvedTimeTransferingToWip.GetValue(TimeUnits.Minute)),
+            ConnectingWip = m.BatchReports.Sum(r => r.StarvedTimeConnectingToWip.GetValue(TimeUnits.Minute)),
+
+            TotalRealTime = total,
+            Utilization = utilization
+        };
+    }).OrderBy(x => x.MixerName).ToList();
+
+    private Color GetEfficiencyColor(double value) => value switch
+    {
+        > 70 => Color.Success,
+        > 40 => Color.Warning,
+        _ => Color.Error
+    };
+
+    public class DetailedRow
+    {
+        public string MixerName { get; set; } = "";
+        public double Batching { get; set; }
+        public double Washing { get; set; }
+        public double TransferToWip { get; set; }
+
+        public double Feeder { get; set; }
+        public double Operator { get; set; }
+        public double WashoutPump { get; set; }
+        public double WipTransferStop { get; set; }
+        public double ConnectingWip { get; set; }
+        public double TotalRealTime { get; set; }
+        public double Utilization { get; set; }
+    }
+
+
+
+}

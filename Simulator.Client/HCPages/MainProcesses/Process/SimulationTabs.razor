@@ -1,4 +1,6 @@
-﻿@using Simulator.Client.HCPages.NewProcessSimulation
+﻿@using Simulator.Client.HCPages.MainProcesses.Reports.Lines
+@using Simulator.Client.HCPages.MainProcesses.Reports.Mixers
+@using Simulator.Client.HCPages.NewProcessSimulation
 
 @using Simulator.Client.HCPages.NewProcessSimulation.NewReports
 @using Simulator.Client.HCPages.NewProcessSimulation.NewReports.ReportLine
@@ -94,17 +96,17 @@
             <MudTabPanel Text="Stoppages">
                 <StoppageReports Simulation="@Simulation"></StoppageReports>
             </MudTabPanel>
-            <MudTabPanel Text="Line Metrics">
-                <AllLinesPerformanceReport Simulation="@Simulation"></AllLinesPerformanceReport>
-            </MudTabPanel>
-            <MudTabPanel Text="Mixer Metrics">
+          <MudTabPanel Text="Mixer Metrics">
                 <MixerMetrics Simulation="@Simulation"></MixerMetrics>
             </MudTabPanel>
-            <MudTabPanel Text="Dashboard">
+            <MudTabPanel Text="Mixer Dashboard">
                 <MixerDashboardPage Simulation="@Simulation"></MixerDashboardPage>
             </MudTabPanel>
-            <MudTabPanel Text="Table">
-                <MixerUtilizationTable Simulation="@Simulation"></MixerUtilizationTable>
+            <MudTabPanel Text="Line Metrics">
+                <LineProductionAnalytics Simulation="@Simulation"></LineProductionAnalytics>
+            </MudTabPanel>
+            <MudTabPanel Text="Line DashBoard">
+                <LineDashBoard Simulation="@Simulation"></LineDashBoard>
             </MudTabPanel>
 
         </MudTabs>

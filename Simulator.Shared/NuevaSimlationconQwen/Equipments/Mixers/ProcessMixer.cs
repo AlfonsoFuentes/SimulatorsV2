@@ -21,7 +21,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
 
         public List<ProcessPump> OutletPumps => OutletEquipments.OfType<ProcessPump>().ToList();
         public ProcessPump? OutletPump => OutletPumps.FirstOrDefault();
-       
+
         public virtual void SetMaterialsAtOutlet(IMaterial material)
         {
             foreach (var outlet in OutletPumps)
@@ -41,12 +41,12 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
         {
             CurrentBatchReport = new(this);
             MixerManufactureOrder newOrderMixer = new MixerManufactureOrder(this, order, CurrentBatchReport);
-          
+
             CurrentBatchReport.DateReceivedToInitBatch = this.CurrentDate;
             CurrentBatchReport.BatchSize = newOrderMixer.BatchSize;
             CurrentBatchReport.TheroticalBatchTime = newOrderMixer.BatchTime;
-      
-          
+
+
             BatchReports.Add(CurrentBatchReport);
             ManufacturingOrders.Enqueue(newOrderMixer);
             order.AddMixerManufactureOrder(newOrderMixer);
@@ -62,7 +62,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
             if (CurrentManufactureOrder == null && CurrentTransferRequest == null && ManufacturingOrders.Count > 0)
             {
                 CurrentLevel = new Amount(0, MassUnits.KiloGram);
-               
+
                 CurrentManufactureOrder = ManufacturingOrders.Dequeue();
 
                 return true;
@@ -196,45 +196,161 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
         }
         public bool IsCurrentStepFeederAvailable()
         {
-            if (CurrentManufactureOrder == null || CurrentManufactureOrder.CurrentStep == null || !CurrentManufactureOrder.CurrentStep.RawMaterialId.HasValue) return false;
-            var IsOperator = IsMaterialFeederOperator(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
-            var newFeeder = IsMaterialFeederAvailableForMixer(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
-            if (IsOperator && newFeeder == null)
+            if (CurrentManufactureOrder?.CurrentStep?.RawMaterialId == null) return false;
+            SetFeeder(null!);
+            var materialId = CurrentManufactureOrder.CurrentStep.RawMaterialId.Value;
+            var IsOperatorSource = IsMaterialFeederOperator(materialId);
+            var newFeeder = IsMaterialFeederAvailableForMixer(materialId);
+
+            // Caso A: El material es manual (el operario ES la fuente de masa)
+            if (IsOperatorSource)
             {
-                if (ProcessOperator != null && !ProcessOperator.OperatorHasNotRestrictionToInitBatch && ProcessOperator.OcuppiedBy == this)
+                if (CapturedOperator != null && CapturedOperator.OcuppiedBy == this)
                 {
-                    //El operador es el feeder  no hay que asignar ni encolar
+                    SetFeeder(CapturedOperator);
+                    Feeder!.ActualFlow = new Amount(1, MassFlowUnits.Kg_sg);
+                    Feeder!.OcuppiedBy = this;
+                    Feeder!.OutletState = new FeederIsInUseByAnotherEquipmentState(Feeder);
                     return true;
                 }
 
+                return false;
             }
+
+            // Caso B: El material es automático (Bomba/Agua)
             if (newFeeder != null)
             {
-
-
-                //Es bomba pero no es el operador o el operador es asignable porque no esta en uso en el mixer
-                Feeder = newFeeder;
-                Feeder.ActualFlow = Feeder.Flow;
-                Feeder.OcuppiedBy = this;
-                Feeder.OutletState = new FeederIsInUseByAnotherEquipmentState(Feeder);
-
+                SetFeeder(newFeeder);
+                Feeder!.ActualFlow = Feeder.Flow;
+                Feeder!.OcuppiedBy = this;
+                Feeder!.OutletState = new FeederIsInUseByAnotherEquipmentState(Feeder);
                 return true;
-
             }
-            EnqueueForMaterialFeeder(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
 
+            // Si llegamos aquí, la bomba de agua/materia prima está ocupada.
+            // DEBEMOS limpiar el Feeder (por si tenía al operario pegado) antes de encolar.
+
+            EnqueueForMaterialFeeder(materialId);
 
             return false;
         }
-        public void ReleseCurrentMassStep()
+        public override void ReleaseFeeder(IManufactureFeeder feederToRelease)
         {
-
-            if (Feeder != null)
+            if (feederToRelease != null)
             {
-                ReleaseFeeder(Feeder);
+                // --- PARCHE DE SEGURIDAD PARA EL OPERARIO ---
+                // Si el feeder es el operario que tengo capturado como personal...
+                if (feederToRelease is ProcessOperator op && CapturedOperator == op)
+                {
+                    // Solo desconectamos la manguera de "masa"
+                    // pero NO limpiamos OcuppiedBy ni notificamos a otros mixers.
+                    if (this.Feeder == feederToRelease)
+                    {
 
+
+                        SetFeeder(null!);
+
+                    }
+                    return; // Salimos sin liberar al humano
+                }
+
+                // --- LIBERACIÓN NORMAL (Para Bombas y Tanques) ---
+                feederToRelease.OcuppiedBy = null!;
+                feederToRelease.OutletState = new FeederAvailableState(feederToRelease);
+                feederToRelease.ActualFlow = ZeroFlow;
+
+                // Notificar a la cola solo si el recurso quedó realmente libre
+                feederToRelease.NotifyNextWaitingEquipment();
+
+                if (this.Feeder == feederToRelease)
+                {
+                    SetFeeder(null!);
+                }
             }
         }
+        public int GetManufactureOrderCount()
+        {
+            int count = 0;
+            if (this.CurrentManufactureOrder != null) count++;
+            count += this.ManufacturingOrders.Count; // Asumiendo que tienes una lista de espera
+            return count;
+        }
+        public void ReleaseCapturedOperator()
+        {
+            if (CapturedOperator != null)
+            {
+                var op = CapturedOperator;
+                op.OcuppiedBy = null!;
+                op.OutletState = new FeederAvailableState(op);
+                op.NotifyNextWaitingEquipment();
+                CapturedOperator = null;
+            }
+        }
+
+        //public bool IsCurrentStepFeederAvailable()
+        //{
+        //    if (CurrentManufactureOrder == null || CurrentManufactureOrder.CurrentStep == null || !CurrentManufactureOrder.CurrentStep.RawMaterialId.HasValue) return false;
+        //    var IsOperator = IsMaterialFeederOperator(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
+        //    var newFeeder = IsMaterialFeederAvailableForMixer(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
+        //    if (IsOperator && newFeeder == null)
+        //    {
+        //        //if (ProcessOperator != null && !ProcessOperator.OperatorHasNotRestrictionToInitBatch && ProcessOperator.OcuppiedBy == this)
+        //        //{
+        //        //    //El operador es el feeder  no hay que asignar ni encolar
+
+        //        //}
+        //        return true;
+        //    }
+        //    if (newFeeder != null)
+        //    {
+
+        //        SetFeeder(newFeeder);
+        //        //Es bomba pero no es el operador o el operador es asignable porque no esta en uso en el mixer
+
+        //        Feeder?.ActualFlow = Feeder.Flow;
+        //        Feeder?.OcuppiedBy = this;
+        //        Feeder?.OutletState = new FeederIsInUseByAnotherEquipmentState(Feeder);
+
+        //        return true;
+
+        //    }
+        //    EnqueueForMaterialFeeder(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
+
+
+        //    return false;
+        //}
+        // En tu clase ProcessMixer.cs
+
+        //public void ReleseCurrentMassStep()
+        //{
+        //    if (Feeder != null)
+        //    {
+        //        // 1. IMPORTANTE: Limpiar la ocupación en el tanque físico
+        //        // Esto es lo que le dice al tanque "Ya no me uses"
+        //        Feeder.OcuppiedBy = null!;
+
+        //        // 2. Cambiar el estado del tanque a Disponible
+        //        if (Feeder.OutletState is FeederIsInUseByAnotherEquipmentState)
+        //        {
+        //            Feeder.OutletState = new FeederAvailableState(Feeder);
+        //        }
+
+        //        // 3. Notificar al siguiente en la cola (en este caso, al Mixer B)
+        //        Feeder.NotifyNextWaitingEquipment();
+
+        //        // 4. Limpiar la referencia en el Mixer
+        //        Feeder = null!;
+        //    }
+        //}
+        //public void ReleseCurrentMassStep()
+        //{
+
+        //    if (Feeder != null)
+        //    {
+        //        ReleaseFeeder(Feeder);
+
+        //    }
+        //}
         void SentNewTransferRequestToWIP()
         {
             if (CurrentManufactureOrder != null)
@@ -256,146 +372,123 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
             //El manejador de estados del mixer manejara esta informacion
             CurrentTransferRequest = TransferRequest;
             OutletState = new MixerOuletTransferingToWIPState(this);
-            if (ProcessOperator != null)
-            {
-                ReleaseOperator();
-            }
+
         }
-        public ProcessOperator? ProcessOperator { get; set; } = null!;
-        public bool IsOperatorAvailable()
+        public ProcessOperator? CapturedOperator { get; set; }
+
+        public bool TryCaptureOperator()
         {
+            var op = InletEquipments.OfType<ProcessOperator>().FirstOrDefault();
+            if (op == null) return true;
 
-            var operators = InletEquipments.OfType<ProcessOperator>().ToList();
-
-            if (operators.Any())
+            if (op.OutletState is FeederAvailableState || op.OcuppiedBy == this)
             {
-                var firstoperator = operators.FirstOrDefault(f => f.OutletState is FeederAvailableState);
-                if (firstoperator != null)
-                {
-                    ProcessOperator = AssignOperator();
-                    return true;
-                }
-                else
-                {
-                    EnqueueForOperator();
-                }
+                op.OcuppiedBy = this;
+                op.OutletState = new FeederIsInUseByAnotherEquipmentState(op);
+                CapturedOperator = op;
 
+                // --- PARCHE CRÍTICO ---
+                // Si el paso actual NO es manual (es decir, requiere una bomba/feeder real),
+                // el operario ya fue capturado como personal, así que debemos liberar el slot de Feeder
+                // para que la bomba de materia prima pueda ocuparlo.
+                if (!IsCurrentStepManualAddition())
+                {
+                    if (Feeder == op)
+                    {
+                        SetFeeder(null!); // Vaciamos el slot de masa
+                    }
+                }
+                return true;
             }
 
+            op.EnqueueWaitingEquipment(this);
             return false;
         }
-        public virtual ProcessOperator? AssignOperator()
+        public bool IsCurrentStepManualAddition()
         {
-            var feeder = InletEquipments
-                .OfType<ProcessOperator>()
-                .FirstOrDefault(f => f.OutletState is FeederAvailableState);
+            // 1. Validaciones de seguridad para evitar NullReferenceException
+            if (CurrentManufactureOrder?.CurrentStep == null) return false;
 
-            if (feeder != null)
-            {
-                feeder.OcuppiedBy = this;
+            var step = CurrentManufactureOrder.CurrentStep;
 
-                feeder.OutletState = new FeederIsInUseByAnotherEquipmentState(feeder);
+            // 2. Si el paso no tiene material (ej. un paso de agitación pura), no es adición manual
+            if (!step.RawMaterialId.HasValue) return false;
 
-
-            }
-            return feeder;
+            // 3. Usamos tu método existente para verificar si este material 
+            // se entrega a través de un operario (Manual) o de una bomba (Automático)
+            return IsMaterialFeederOperator(step.RawMaterialId.Value);
         }
-        public virtual void EnqueueForOperator()
+
+
+        public bool IsCapturedOperatorOnBreak()
         {
-            var candidates = InletEquipments
-                .OfType<ProcessOperator>()
+            if (CapturedOperator == null) return false;
 
-                .ToList();
-
-            if (candidates.Any())
-            {
-
-                var best = candidates.OrderBy(f => f.GetWaitingQueueLength()).First();
-                best.EnqueueWaitingEquipment(this);
-            }
+            // Verificamos si el operario entró en parada programada usando la lógica de Equipment
+            return CapturedOperator.IsEquipmentInPlannedDownTimeState();
         }
-        public void ReleaseOperator()
+        // Dentro de ProcessMixer.cs
+
+        /// <summary>
+        /// PARCHE: Indica cuánto tiempo (en minutos) le falta al mixer para estar libre 
+        /// para una nueva orden, incluyendo el tiempo de transferencia actual.
+        /// </summary>
+        // Dentro de la clase parcial ProcessMixer
+
+        // Dentro de la clase parcial ProcessMixer
+
+        public Amount GetTimeUntilMixerIsReadyForNewOrder()
         {
-            var _feeder = ProcessOperator;
-            if (_feeder != null)
+            Amount totalWait = new Amount(0, TimeUnits.Minute);
+
+            // 1. Tiempo del Lote Activo (Si hay uno procesándose)
+            if (CurrentManufactureOrder != null)
             {
-                // 1. Liberar nombre
-                _feeder.OcuppiedBy = null!;
-
-                // 2. Cambiar estado a disponible
-                _feeder.OutletState = new FeederAvailableState(_feeder);
-
-                // 3. Notificar al siguiente en la cola
-                NotifyNextWaitingEquipment(_feeder);
-                ProcessOperator = null!;
-
+                totalWait += CurrentManufactureOrder.PendingBatchTime.ConvertedTo(TimeUnits.Minute);
             }
-        }
-        public void OnOperatorMayBeAvailable(ProcessMixer mixer, ProcessOperator feeder)
-        {
-            if (feeder.OutletState is FeederAvailableState || feeder.OutletState is FeederRealesStarvedState)
-            {
-                mixer.EndCriticalReport();
-                feeder.OcuppiedBy = mixer;
-                feeder.OutletState = new FeederIsInUseByAnotherEquipmentState(feeder);
 
-                if (mixer.InletState is MixerBatchingByMassStarvedByFeederNoAvailableState)
+            // 2. Tiempo de Transferencia Activa (Si el mixer está bombeando masa ahora)
+            if (CurrentTransferRequest != null)
+            {
+                var pendingMass = CurrentTransferRequest.PendingToReceive;
+                var flowValue = (OutletPump?.Flow != null && OutletPump.Flow.Value > 0)
+                                ? OutletPump.Flow.GetValue(MassFlowUnits.Kg_min)
+                                : 1.0;
+
+                totalWait += new Amount(pendingMass.GetValue(MassUnits.KiloGram) / flowValue, TimeUnits.Minute);
+            }
+
+            // --- PARCHE CORREGIDO: Sumar órdenes en cola ---
+            // Iteramos por las órdenes que están esperando su turno en este Mixer
+            foreach (var queuedOrder in ManufacturingOrders)
+            {
+                // Buscamos la receta (IEquipmentMaterial) asociada al material de la orden en este mixer
+                var recipe = EquipmentMaterials.FirstOrDefault(x => x.Material.Id == queuedOrder.Material.Id);
+
+                if (recipe != null)
                 {
-                    mixer.Feeder = feeder;
+                    // Así estaba... (Error: queuedOrder no tiene .Recipe)
+                    // totalWait += queuedOrder.Recipe.BatchCycleTime;
+
+                    // 1. Sumamos el ciclo de batch completo (BatchCycleTime)
+                    totalWait += recipe.BatchCycleTime;
+
+                    // 2. Sumamos el tiempo de transferencia proyectado para esa orden
+                    // $$Minutes = \frac{BatchSize}{Flow}$$
+                    var flow = (OutletPump?.Flow != null && OutletPump.Flow.Value > 0)
+                               ? OutletPump.Flow.GetValue(MassFlowUnits.Kg_min)
+                               : 1.0;
+
+                    double transferMinutes = queuedOrder.BatchSize.GetValue(MassUnits.KiloGram) / flow;
+                    totalWait += new Amount(transferMinutes, TimeUnits.Minute);
                 }
-                else if (mixer.InletState is MixerInletStarvedCatchOperatorStarvedTimeState ||
-                    mixer.InletState is MixerBatchingByOperatorStarvedState ||
-                    mixer.InletState is MixerInletStarvedCatchOperatorStarvedNoTimeState)
-                {
-
-                    mixer.ProcessOperator = feeder;
-                }
-
-
             }
+          
+
+            return totalWait;
+           
         }
-        public void NotifyNextWaitingEquipment(ProcessOperator feeder)
-        {
-            if (feeder.WaitingQueue.Count == 0) return;
-
-            var next = feeder.WaitingQueue.First!.Value;
-            feeder.WaitingQueue.RemoveFirst();
-            if (next is ProcessMixer mixer)
-            {
-                OnOperatorMayBeAvailable(mixer, feeder);
-
-            }
-
-
-
-        }
-
-        public bool IsOperatorStarvedAtInit { get; set; } = false;
-        public Amount OperatorStarvedTime = new Amount(0, TimeUnits.Second);
-        public Amount OperatorStarvedCurrenTime = new Amount(0, TimeUnits.Second);
-        public Amount OperatorStarvedPendingTime => OperatorStarvedTime - OperatorStarvedCurrenTime;
-        public void CalculateOperatorStarvedTimeCompleted()
-        {
-            if (OperatorStarvedPendingTime <= ZeroTime)
-            {
-                if (IsOperatorStarvedAtInit)
-                {
-
-                    OperatorStarvedTime = new Amount(0, TimeUnits.Second);
-                    OperatorStarvedCurrenTime = new Amount(0, TimeUnits.Second);
-                    IsOperatorStarvedAtInit = false;
-                }
-                ReleaseOperator();
-
-            }
-            else
-            {
-                OperatorStarvedCurrenTime += OneSecond;
-            }
-
-
-        }
+       
     }
-
 
 }

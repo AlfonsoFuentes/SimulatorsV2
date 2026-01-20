@@ -45,8 +45,8 @@ namespace Simulator.Shared.Models.HCs.Conectors
         public string ToName => To == null! ? "" : To.Name;
 
         public Guid MainProcessId { get; set; }
-        public List<BaseEquipmentDTO?> Froms { get; set; } = new();
-        public List<BaseEquipmentDTO?> Tos { get; set; } = new();
+        public List<BaseEquipmentDTO?>? Froms { get; set; } = new();
+        public List<BaseEquipmentDTO?>? Tos { get; set; } = new();
 
     }
     //public class DeleteConectorRequest : DeleteMessageResponse, IRequest

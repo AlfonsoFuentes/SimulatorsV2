@@ -129,7 +129,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
             Tank = wip;
 
             LineNextProductionOrder = Line.InformNextProductionOrder;
-            Report = new WipTankForLineReport(); 
+            Report = new WipTankForLineReport();
             Report.Name = wip.Name;
 
         }
@@ -366,6 +366,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
         public Amount MassReceived { get; set; } = new Amount(0, MassUnits.KiloGram);
         public Amount PendingToReceive => TotalQuantityToTransfer - MassReceived;
         public Amount TransferFlow { get; set; } = new Amount(0, MassFlowUnits.Kg_min);
+        public Amount PendingTransferTime => PendingToReceive / TransferFlow;
 
         public bool CanTransferWithoutOverflowingDestination()
         {
@@ -424,9 +425,11 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
         Amount CurrentStarvedTime { get; }
         int TotalSteps { get; set; }
         ManufaturingEquipment ManufaturingEquipment { get; }
+      
     }
     public class MixerManufactureOrder : IManufactureOrder
     {
+        public Amount TransferTime { get; set; }
         public BatchReport BatchReport { get; private set; } = null!;
         public Guid Id { get; } = Guid.NewGuid();
         public ManufaturingEquipment ManufaturingEquipment { get; private set; } = null!;
@@ -439,6 +442,8 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
             this.ManufaturingEquipment = Mixer;
             this.WIPOrder = WIPOrder;
             this.Material = WIPOrder.Material;
+            TransferTime = new Amount(1, TimeUnits.Minute);
+
             if (Mixer.EquipmentMaterials.Any(x => x.Material.Id == Material.Id))
             {
 
@@ -455,10 +460,13 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
                         RecipeSteps.Enqueue(item);
                     }
                 }
+                WIPOrder.Report.Batches.Add(_BatchReport);
+                BatchReport = _BatchReport;
+                var pumpFlow = (Mixer is ProcessMixer _mixer) ? _mixer.OutletPump?.Flow : new Amount(1, MassFlowUnits.Kg_sg);
 
+                TransferTime = pumpFlow != null ? new Amount(BatchSize.GetValue(MassUnits.KiloGram) / pumpFlow.GetValue(MassFlowUnits.Kg_min), TimeUnits.Minute) : new Amount(1, TimeUnits.Minute);
             }
-            WIPOrder.Report.Batches.Add(_BatchReport);
-            BatchReport = _BatchReport;
+
         }
 
 

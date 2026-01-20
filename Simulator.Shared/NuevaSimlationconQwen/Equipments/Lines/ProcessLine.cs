@@ -12,7 +12,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 {
     public class ProcessLine : Equipment, ILiveReportable
     {
-
+        public LineReport LineReport { get; set; }
         public List<ProcessWipTankForLine> WIPTanksAttached => _wipTanks ??= InletPumps.SelectMany(x => x.InletWipTanks).ToList();
         public List<ProcessMixer> PreferredManufacturer { get; set; } = new();
 
@@ -29,7 +29,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
         public ProcessLine()
         {
 
-
+            LineReport = new LineReport(this);
         }
         public override void ValidateOutletInitialState(DateTime currentdate)
         {

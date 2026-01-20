@@ -1,0 +1,72 @@
+﻿@using MudBlazor
+@using UnitSystem
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <div class="d-flex align-center justify-space-between mb-6">
+        <MudText Typo="Typo.h4">Line Utilization Dashboard</MudText>
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.body2">Minutes</MudText>
+            <MudSwitch @bind-Value="_isPercentage" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2">Percentage (%)</MudText>
+        </MudStack>
+    </div>
+
+    <MudGrid>
+        @foreach (var line in AllLines)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Class="pa-4 d-flex flex-column align-center" Elevation="3" Style="height: 100%; min-height: 480px;">
+                    <MudText Typo="Typo.h6">@line.Name</MudText>
+                    <MudDivider Class="my-2" Style="width: 100%;" />
+
+                    <div class="flex-grow-1 d-flex align-center">
+                        <MudChart ChartType="ChartType.Pie"
+                                  InputData="@GetLineData(line.LineReport)"
+                                  InputLabels="@Labels"
+                                  Width="220px" Height="220px"
+                                  ChartOptions="@_lineOptions" />
+                    </div>
+
+                    <MudAlert Severity="Severity.Normal" Variant="Variant.Text" Dense="true" Class="mt-4 w-100">
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.caption">Total Time:</MudText>
+                            <MudText Typo="Typo.caption"><b>@line.LineReport.TotalTime.GetValue(TimeUnits.Minute).ToString("0.##") min</b></MudText>
+                        </div>
+                    </MudAlert>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter] public GeneralSimulation Simulation { get; set; } = null!;
+
+    private IEnumerable<ProcessLine> AllLines =>
+        Simulation.Equipments
+                  .OfType<ProcessLine>()
+                  .OrderBy(l => l.Name);
+    private bool _isPercentage = false;
+
+    private string[] Labels = { "Producing", "Washing", "ChangeOver", "LowLevelWIP", "NotScheduled", "PlannedDowntime" };
+
+    private ChartOptions _lineOptions = new ChartOptions()
+    {
+        ChartPalette = new[] { "#2E7D32", "#43A047", "#FBC02D", "#FF9800", "#9E9E9E", "#D32F2F" },
+        ShowLegend = false // Oculta los nombres debajo del gráfico
+
+    };
+
+    private double[] GetLineData(LineReport report)
+    {
+        var raw = new[] {
+            report.Producing.GetValue(TimeUnits.Minute),
+            report.WashingTime.GetValue(TimeUnits.Minute),
+            report.ChangeOverTime.GetValue(TimeUnits.Minute),
+            report.LowLevelWipTime.GetValue(TimeUnits.Minute),
+            report.NotScheduledTime.GetValue(TimeUnits.Minute),
+            report.PlannedDowntime.GetValue(TimeUnits.Minute)
+        };
+        return _isPercentage && raw.Sum() > 0 ? raw.Select(v => Math.Round(v / raw.Sum() * 100, 1)).ToArray() : raw;
+    }
+}

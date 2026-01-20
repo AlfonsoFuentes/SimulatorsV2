@@ -16,7 +16,7 @@ namespace Web.Infrastructure.Validators.FinishinLines.Conectors
         {
             Service = service;
 
-            RuleFor(x => x.Froms.Count).NotEqual(0).WithMessage("From equipment must be defined!");
+            RuleFor(x => x.Froms!.Count).NotEqual(0).WithMessage("From equipment must be defined!");
 
 
             RuleFor(x => x.From)
@@ -44,7 +44,7 @@ namespace Web.Infrastructure.Validators.FinishinLines.Conectors
             Service = service;
 
 
-            RuleFor(x => x.Tos.Count).NotEqual(0).WithMessage("To equipment must be defined!");
+            RuleFor(x => x.Tos!.Count).NotEqual(0).WithMessage("To equipment must be defined!");
 
             RuleFor(x => x.To)
         .MustAsync((dto, _, ct) => ValidateCombination(dto, ct))

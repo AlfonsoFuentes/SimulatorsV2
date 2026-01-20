@@ -1,4 +1,5 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.States.BaseClass;
+﻿using Simulator.Shared.NuevaSimlationconQwen.Reports;
+using Simulator.Shared.NuevaSimlationconQwen.States.BaseClass;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 {
@@ -43,7 +44,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
         {
             StateLabel = $"{equipment.Name} Not Scheduled";
         }
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.NotScheduled);
+        }
 
     }
 
@@ -75,7 +79,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
             StateLabel = $"{line.Name} Not Scheduled this Shift";
             AddTransition<LineStateReviewProducingState>(line => line.IsScheduledForShift(line.ActualShift));
         }
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.NotScheduled);
+        }
     }
     public class LineStateStarvedByTankLowLevelState : LineOutletState, IStarvedLine
     {
@@ -88,7 +95,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
             AddTransition<LineStateReviewProducingState>(line => line.IsLineAvailableAfterStarved());
         }
 
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.LowLevelWIP);
+        }
 
     }
     public class LineStateProducingStarvedByAuState : LineOutletState, IProducerAUState
@@ -104,7 +114,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 
         }
 
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.Producing);
+        }
 
         public override void Run(DateTime currentdate)
         {
@@ -121,6 +134,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
             StateLabel = $"{line.Name} Starved by planned down time";
             AddTransition<LineStateReviewProducingState>(line => line.IsPlannedDowntimeAchieved());
 
+        }
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.PlannedDowntime);
         }
 
     }
@@ -155,6 +172,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
         {
             _line.RunByProducing();
         }
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.Producing);
+        }
     }
     public class LineStateReviewWIPsTanksState : LineOutletState
     {
@@ -183,7 +204,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
             AddTransition<LineStateProducingToEmptyWIPsState>(line => line.IsPlannedDowntimeAchieved());
 
         }
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.PlannedDowntime);
+        }
     }
     public class LineStateNotThisShiftToEmptyTankScheduledState : LineOutletState
     {
@@ -196,7 +220,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
             StateLabel = $"{line.Name} Not Scheduled this Shift";
             AddTransition<LineStateProducingToEmptyWIPsState>(line => line.IsScheduledForShift(line.ActualShift));
         }
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.NotScheduled);
+        }
     }
     public class LineStateProducingToEmptyWIPsState : LineOutletState, IProducerState
     {
@@ -220,7 +247,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 
 
         }
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.Producing);
+        }
 
         public override void Run(DateTime currentdate)
         {
@@ -255,7 +285,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
             AddTransition<LineStateProducingToEmptyWIPsState>(line => line.MustRunProducing());
 
         }
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.Producing);
+        }
 
 
         public override void Run(DateTime currentdate)
@@ -299,7 +332,10 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 
         }
 
-
+        public override void Report(DateTime currentdate)
+        {
+            _line.LineReport.RecordTime(LineTimeType.ChangeOver);
+        }
 
         public override void Run(DateTime currentdate)
         {

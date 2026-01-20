@@ -308,18 +308,18 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Reports
                     items.Add(new LiveReportItem { Label = "Next Scheduled", Value = $"{order.Material.CommonName} to {order.WIPOrder.Tank.Name}", Style = new() });
                 }
             }
-            if (mixer.ProcessOperator != null && !mixer.ProcessOperator.OperatorHasNotRestrictionToInitBatch)
-            {
-                items.Add(new LiveReportItem { Label = "Operator Attached", Value = mixer.ProcessOperator.Name, Style = new() });
-                if (mixer.ProcessOperator.MaxRestrictionTime.Value > 0)
-                {
-                    items.Add(new LiveReportItem { Label = "Operator will be realease in: ", Value = $"{Math.Round(mixer.OperatorStarvedPendingTime.GetValue(TimeUnits.Minute), 2)}, min" , Style = new() });
-                }
-                else
-                {
-                    items.Add(new LiveReportItem { Label = "Operator will be realease", Value = $"When init Transfer to WIP", Style = new() });
-                }
-            }
+            //if (mixer.ProcessOperator != null && !mixer.ProcessOperator.OperatorHasNotRestrictionToInitBatch)
+            //{
+            //    items.Add(new LiveReportItem { Label = "Operator Attached", Value = mixer.ProcessOperator.Name, Style = new() });
+            //    if (mixer.ProcessOperator.MaxRestrictionTime.Value > 0)
+            //    {
+            //        items.Add(new LiveReportItem { Label = "Operator will be realease in: ", Value = $"{Math.Round(mixer.OperatorStarvedPendingTime.GetValue(TimeUnits.Minute), 2)}, min" , Style = new() });
+            //    }
+            //    else
+            //    {
+            //        items.Add(new LiveReportItem { Label = "Operator will be realease", Value = $"When init Transfer to WIP", Style = new() });
+            //    }
+            //}
 
             return new EquipmentReportMetadata
             {

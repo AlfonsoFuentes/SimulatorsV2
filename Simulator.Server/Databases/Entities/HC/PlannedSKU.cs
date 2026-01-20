@@ -82,6 +82,7 @@ namespace Simulator.Server.Databases.Entities.HC
         PlannedSKUDTO getPlannedSkudto()
         {
             PlannedSKUDTO result = new();
+            result.Id = Id;
             result.PlannedCases = PlannedCases;
             //Case_Shift = row.SKU.SKULines.Case_Shift,
             result.TimeToChangeSKUUnitName = TimeToChangeSKUUnit;

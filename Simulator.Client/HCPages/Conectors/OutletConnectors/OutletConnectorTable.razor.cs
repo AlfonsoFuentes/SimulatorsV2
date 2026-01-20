@@ -74,7 +74,7 @@ namespace Simulator.Client.HCPages.Conectors.OutletConnectors
             {
                 if (EquipmentId == Guid.Empty)
                 {
-                    foreach (var to in response.Tos)
+                    foreach (var to in response.Tos!)
                     {
                         Items.Add(new OutletConnectorDTO
                         {

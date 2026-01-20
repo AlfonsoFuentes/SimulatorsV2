@@ -18,7 +18,6 @@ using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Skids;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks;
-using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
 using Simulator.Shared.NuevaSimlationconQwen.Materials;
 using Simulator.Shared.NuevaSimlationconQwen.Reports;
 using Simulator.Shared.NuevaSimlationconQwen.States.PlannedDownTimes;

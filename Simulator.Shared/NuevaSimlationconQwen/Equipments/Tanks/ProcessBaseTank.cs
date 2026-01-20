@@ -1,4 +1,6 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
+﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
 using Simulator.Shared.NuevaSimlationconQwen.Materials;
 using Simulator.Shared.NuevaSimlationconQwen.Reports;
@@ -114,7 +116,40 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
         {
             RunTime += OneSecond;
         }
+        protected Amount GetOperatorDownTimeDelay(ManufaturingEquipment mixer, Amount waitToStart, Amount workDuration)
+        {
+            var op = mixer.InletEquipments.OfType<ProcessOperator>().FirstOrDefault();
+            if (op == null) return new Amount(0, TimeUnits.Minute);
 
+            double extraMinutes = 0;
+            DateTime now = CurrentDate; // Usar el reloj de la simulación
+
+            // Proyectamos cuándo empezaría el operario y cuándo terminaría
+            DateTime startProjected = now.AddMinutes(waitToStart.GetValue(TimeUnits.Minute));
+            DateTime endProjected = startProjected.AddMinutes(workDuration.GetValue(TimeUnits.Minute));
+
+            TimeSpan projectStart = startProjected.TimeOfDay;
+            TimeSpan projectEnd = endProjected.TimeOfDay;
+
+            foreach (var breakTime in op.PlannedDownTimes)
+            {
+                // 1. Si la parada empieza durante el trabajo
+                if (breakTime.Start >= projectStart && breakTime.Start < projectEnd)
+                {
+                    extraMinutes += (breakTime.End - breakTime.Start).TotalMinutes;
+                    // Actualizamos el final proyectado porque el almuerzo "empuja" el trabajo
+                    projectEnd = projectEnd.Add(breakTime.End - breakTime.Start);
+                }
+                // 2. Si ya estamos en la parada cuando el mixer queda libre
+                else if (projectStart >= breakTime.Start && projectStart < breakTime.End)
+                {
+                    extraMinutes += (breakTime.End - projectStart).TotalMinutes;
+                    projectEnd = projectEnd.Add(breakTime.End - projectStart);
+                }
+            }
+
+            return new Amount(extraMinutes, TimeUnits.Minute);
+        }
 
     }
 

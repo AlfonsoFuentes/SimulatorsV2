@@ -44,6 +44,8 @@ namespace Simulator.Client.HCPages.MainProcesses
                 StateHasChanged();
             }
         }
+        bool ShowProcess = true;
+        bool Showplanned = true;
         async Task Edit(ProcessFlowDiagramDTO response)
         {
 
@@ -145,6 +147,7 @@ namespace Simulator.Client.HCPages.MainProcesses
 
             // Esperar a que ambas terminen
             await Task.WhenAll(task1, task2);
+            ShowProcess = false;
 
         }
         public async Task SelectAllProcess()
@@ -221,6 +224,7 @@ namespace Simulator.Client.HCPages.MainProcesses
             SelectedPlanned = planned;
             if (!SimulationLoading && Simulation != null)
                 Simulation.SetPlanned(planned);
+            Showplanned = false;
             StateHasChanged();
         }
     }

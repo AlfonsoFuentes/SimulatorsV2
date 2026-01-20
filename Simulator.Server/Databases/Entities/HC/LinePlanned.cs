@@ -43,14 +43,17 @@ namespace Simulator.Server.Databases.Entities.HC
                 var entity = new LinePlanned
                 {
                     Id = Guid.NewGuid(),
-                   SimulationPlannedId = mappeddto.SimulationPlannedId,
+                    SimulationPlannedId = mappeddto.SimulationPlannedId,
+                    LineId = mappeddto.LineId,
 
                 };
-                 foreach(var plannedsku in mappeddto.PlannedSKUDTOs)
-                 {
+                int order = 0;  
+                foreach (var plannedsku in mappeddto.PlannedSKUDTOs)
+                {
                     PlannedSKU rowplanned = PlannedSKU.Create(plannedsku);
                     rowplanned.LinePlannedId = entity.Id;
                     rowplanned.MapFromDto(plannedsku);
+                    rowplanned.Order = order++;
                     entity.SKUPlanneds.Add(rowplanned);
                 }
                 foreach (var preferedmixer in mappeddto.PreferedMixerDTOs)
@@ -61,11 +64,11 @@ namespace Simulator.Server.Databases.Entities.HC
                     entity.PreferedMixers.Add(rowpreferred);
                 }
 
-                    return entity;
+                return entity;
             }
             return null!;
         }
-        public  void MapFromDto(IDto dto)
+        public void MapFromDto(IDto dto)
         {
             switch (dto)
             {
@@ -74,7 +77,7 @@ namespace Simulator.Server.Databases.Entities.HC
                         ShiftType = request.ShiftType;
                         WIPLevelValue = request.WIPLevelValue;
                         WIPLevelUnit = request.WIPLevelUnitName;
-         
+
 
                     }
                     break;
@@ -84,15 +87,15 @@ namespace Simulator.Server.Databases.Entities.HC
 
             }
         }
-        public  T MapToDto<T>() where T : IDto,new()
+        public T MapToDto<T>() where T : IDto, new()
         {
             return typeof(T) switch
             {
                 _ when typeof(T) == typeof(LinePlannedDTO) => (T)(object)new LinePlannedDTO
                 {
                     Id = Id,
-                    MainProcesId =  HCSimulationPlanned == null ? Guid.Empty : HCSimulationPlanned.MainProcessId,
-       
+                    MainProcesId = HCSimulationPlanned == null ? Guid.Empty : HCSimulationPlanned.MainProcessId,
+
                     LineDTO = Line == null ? null! : Line.MapToDto<LineDTO>(),
                     WIPLevelValue = WIPLevelValue,
                     WIPLevelUnitName = WIPLevelUnit,

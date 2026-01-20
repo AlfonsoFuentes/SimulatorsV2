@@ -4,26 +4,48 @@
 <MudStack>
     <MudCard>
         <MudStack>
-            <IconButton Size=@Size.Small ToolTip="Add new Proces" Icon="@Icons.Material.Filled.Add" Variant=Variant.Outlined OnClick="AddNew"></IconButton>
-            <div>
-                <MudGrid>
-                    @foreach (var item in Items)
-                    {
-                        <MudItem xs="12" md="3">
-                            <MainProcessCard Model="@item" GetAll="GetAll" SelectProcess="SelectProcessAndPlannedByID"></MainProcessCard>
-                        </MudItem>
-                    }
-                </MudGrid>
-            </div>
+            <MudStack Row="true">
+                <IconButton Size=@Size.Small ToolTip="Add new Proces" Icon="@Icons.Material.Filled.Add" Variant=Variant.Outlined OnClick="AddNew"></IconButton>
+                @if (!Showplanned)
+                {
+                    <Button ToolTip="Processes" OnClick="@(() => ShowProcess = !ShowProcess)" Text="Show Process"></Button>
+                }
+
+                @if (!Showplanned)
+                {
+                    <Button ToolTip="Planned" OnClick="@(() => Showplanned = !Showplanned)" Text="Show PLanned"></Button>
+                }
+            </MudStack>
+           
+
+            @if (ShowProcess)
+            {
+                <div>
+                    <MudGrid>
+                        @foreach (var item in Items)
+                        {
+                            <MudItem xs="12" md="3">
+                                <MainProcessCard Model="@item" GetAll="GetAll" SelectProcess="SelectProcessAndPlannedByID"></MainProcessCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </div>
+
+            }
+
+
         </MudStack>
     </MudCard>
     <MudCard>
-
-        @if (PlannedItems != null)
+        @if (Showplanned)
         {
-            <SelectPlannedCards Items="@PlannedItems" MainProcessId="MainProcessId"
-                                GetAll="SelectAllPlan" PlannedChanged="SelectPlan"></SelectPlannedCards>
+            @if (PlannedItems != null)
+            {
+                <SelectPlannedCards Items="@PlannedItems" MainProcessId="MainProcessId"
+                                    GetAll="SelectAllPlan" PlannedChanged="SelectPlan"></SelectPlannedCards>
+            }
         }
+
     </MudCard>
     <MudCard>
 

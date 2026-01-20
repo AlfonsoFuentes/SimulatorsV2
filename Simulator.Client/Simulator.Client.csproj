@@ -7,6 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="HCPages\EquipmentBases\**" />
+    <Compile Remove="NewFolder\**" />
+    <Content Remove="HCPages\EquipmentBases\**" />
+    <Content Remove="NewFolder\**" />
+    <EmbeddedResource Remove="HCPages\EquipmentBases\**" />
+    <EmbeddedResource Remove="NewFolder\**" />
+    <None Remove="HCPages\EquipmentBases\**" />
+    <None Remove="NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
 	  <PackageReference Include="BlazorDownloadFile" Version="2.4.0.2" />
 	  <PackageReference Include="Blazored.FluentValidation" Version="2.2.0" />
 	  <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
@@ -27,11 +38,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Simulator.Client.Infrastructure\Simulator.Client.Infrastructure.csproj" />
     <ProjectReference Include="..\Simulator.Shared\Simulator.Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="HCPages\EquipmentBases\" />
-    <Folder Include="NewFolder\" />
   </ItemGroup>
 
   <ItemGroup>

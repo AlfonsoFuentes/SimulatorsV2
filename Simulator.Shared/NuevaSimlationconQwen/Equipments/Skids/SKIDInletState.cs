@@ -78,7 +78,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Skids
                 {
                     skid.EndCriticalReport();
                     skid.Feeder.OcuppiedBy = null!;
-                    skid.Feeder = null!;
+                    skid.SetFeeder(null!);
               
                     return true;
                 }

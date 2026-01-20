@@ -163,7 +163,13 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments
         }
         public virtual void Report(DateTime currentdate) { }
 
-        public IManufactureFeeder? Feeder { get; set; } = null!;
+        IManufactureFeeder? _Feeder;
+        public IManufactureFeeder? Feeder { get => _Feeder; } 
+
+        public void SetFeeder(IManufactureFeeder feeder)
+        {
+            _Feeder = feeder;
+        }
 
         public void StartCriticalReport(IEquipment source, string reason, string description)
         {
@@ -215,20 +221,30 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments
             }
             return false;
         }
-
-
         public void OnFeederMayBeAvailable(IManufactureFeeder feeder)
         {
-            if (feeder.OutletState is FeederAvailableState || feeder.OutletState is FeederRealesStarvedState)
+            // Solo capturar si el feeder quedó realmente libre tras la notificación
+            if (feeder.OcuppiedBy == null && (feeder.OutletState is FeederAvailableState || feeder.OutletState is FeederRealesStarvedState))
             {
                 EndCriticalReport();
                 feeder.OcuppiedBy = this;
                 feeder.OutletState = new FeederIsInUseByAnotherEquipmentState(feeder);
-                Feeder = feeder;
-
-
+                _Feeder = feeder;
             }
         }
+
+        //public void OnFeederMayBeAvailable(IManufactureFeeder feeder)
+        //{
+        //    if (feeder.OutletState is FeederAvailableState || feeder.OutletState is FeederRealesStarvedState)
+        //    {
+        //        EndCriticalReport();
+        //        feeder.OcuppiedBy = this;
+        //        feeder.OutletState = new FeederIsInUseByAnotherEquipmentState(feeder);
+        //        Feeder = feeder;
+
+
+        //    }
+        //}
 
 
 
@@ -293,7 +309,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments
                 var firstpump = washoutpumps.FirstOrDefault(f => f.OutletState is FeederAvailableState);
                 if (firstpump != null)
                 {
-                    Feeder = AssignWashoutPump();
+                    _Feeder = AssignWashoutPump();
                     return true;
                 }
                 else
@@ -321,7 +337,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments
                 feeder.ActualFlow = feeder.Flow;
                 feeder.OcuppiedBy = this;
                 feeder.OutletState = new FeederIsInUseByAnotherEquipmentState(feeder);
-                Feeder = feeder;
+                _Feeder = feeder;
 
             }
             return feeder;
@@ -341,7 +357,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments
                 feeder.OcuppiedBy = this;
                 feeder.ActualFlow = feeder.Flow;
                 feeder.OutletState = new FeederIsInUseByAnotherEquipmentState(feeder);
-                Feeder = feeder;
+                _Feeder = feeder;
 
             }
             return feeder;
@@ -383,24 +399,61 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments
                 best.EnqueueWaitingEquipment(this);
             }
         }
-
-        public virtual void ReleaseFeeder(IManufactureFeeder _feeder)
+        public virtual void ReleaseFeeder(IManufactureFeeder feederToRelease)
         {
-            if (_feeder != null)
+            if (feederToRelease != null)
             {
-                // 1. Liberar nombre
-                _feeder.OcuppiedBy = null!;
+                // 1. Limpiar el tanque físico
+                feederToRelease.OcuppiedBy = null!;
+                feederToRelease.OutletState = new FeederAvailableState(feederToRelease);
+                feederToRelease.ActualFlow = ZeroFlow;
 
-                // 2. Cambiar estado a disponible
-                _feeder.OutletState = new FeederAvailableState(_feeder);
-                _feeder.ActualFlow = ZeroFlow;
-                // 3. Notificar al siguiente en la cola
-                _feeder.NotifyNextWaitingEquipment();
+                // 2. Notificar al siguiente (Esto sacará al Mixer B de Starved)
+                feederToRelease.NotifyNextWaitingEquipment();
 
-                // Limpiar referencia local
-                _feeder = null!;
+                // 3. PARCHE 3: Limpiar la propiedad REAL del Mixer
+                if (this.Feeder == feederToRelease)
+                {
+                    _Feeder = null!;
+                }
             }
         }
+        //public virtual void ReleaseFeeder(IManufactureFeeder _feeder)
+        //{
+        //    if (_feeder != null)
+        //    {
+        //        // 1. IMPORTANTE: Validar que el Mixer que intenta liberar es realmente el dueño
+        //        if (_feeder.OcuppiedBy == this)
+        //        {
+        //            _feeder.OcuppiedBy = null!;
+        //            _feeder.OutletState = new FeederAvailableState(_feeder);
+        //            _feeder.ActualFlow = ZeroFlow; // Usando tu variable LaTeX $ZeroFlow$
+
+        //            // 2. Notificar al siguiente SOLO después de haber limpiado la casa
+        //            _feeder.NotifyNextWaitingEquipment();
+        //        }
+
+        //        // 3. Limpiar la propiedad REAL del mixer, no solo el parámetro
+        //        this.Feeder = null!;
+        //    }
+        //}
+        //public virtual void ReleaseFeeder(IManufactureFeeder _feeder)
+        //{
+        //    if (_feeder != null)
+        //    {
+        //        // 1. Liberar nombre
+        //        _feeder.OcuppiedBy = null!;
+
+        //        // 2. Cambiar estado a disponible
+        //        _feeder.OutletState = new FeederAvailableState(_feeder);
+        //        _feeder.ActualFlow = ZeroFlow;
+        //        // 3. Notificar al siguiente en la cola
+        //        _feeder.NotifyNextWaitingEquipment();
+
+        //        // Limpiar referencia local
+        //        _feeder = null!;
+        //    }
+        //}
         public virtual bool ReleaseWashoutPump()
         {
             if (Feeder != null)

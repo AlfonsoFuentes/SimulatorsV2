@@ -1,0 +1,90 @@
+﻿@using MudBlazor
+@using UnitSystem
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-4">Line Production Performance & OEE</MudText>
+
+    <MudGrid>
+        <MudItem xs="12">
+            <MudTable Items="@LineRows" Hover="true" Elevation="3" Dense="true" FixedHeader="true">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Line Utilization Analytics (Minutes)</MudText>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Line Name</MudTh>
+                    <MudTh Style="background-color: #e8f5e9;">Producing</MudTh>
+                    <MudTh Style="background-color: #e8f5e9;">Washing</MudTh>
+                    <MudTh Style="background-color: #fffde7;">Change Over</MudTh>
+                    <MudTh Style="background-color: #fff3e0;">Low Level WIP</MudTh>
+                    <MudTh Style="background-color: #fbe9e7;">Planned Downtime</MudTh>
+                    <MudTh Style="background-color: #fafafa;">Total Time</MudTh>
+                    <MudTh Style="background-color: #e3f2fd;"><b>Utilization %</b></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.LineName</MudTd>
+                    <MudTd>@context.Producing.ToString("0.##")</MudTd>
+                    <MudTd>@context.Washing.ToString("0.##")</MudTd>
+                    <MudTd>@context.ChangeOver.ToString("0.##")</MudTd>
+                    <MudTd>@context.LowLevelWip.ToString("0.##")</MudTd>
+                    <MudTd>@context.PlannedDowntime.ToString("0.##")</MudTd>
+                    <MudTd>@context.TotalTime.ToString("0.##")</MudTd>
+                    <MudTd>
+                        <MudProgressLinear Color="@GetEfficiencyColor(context.Utilization)" Value="@context.Utilization" Class="my-1" />
+                        <MudText Typo="Typo.caption"><b>@context.Utilization.ToString("0.#")%</b></MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<style>
+    .bold-footer {
+        font-weight: bold;
+        background-color: #f5f5f5;
+    }
+</style>
+
+@code {
+    [Parameter] public GeneralSimulation Simulation { get; set; } = null!;
+
+    private IEnumerable<ProcessLine> AllLines =>
+        Simulation.Equipments
+                  .OfType<ProcessLine>()
+                  .OrderBy(l => l.Name);
+
+    private List<LineSummaryRow> LineRows => AllLines.Select(l =>
+    {
+        double producing = l.LineReport.Producing.GetValue(TimeUnits.Minute);
+        double total = l.LineReport.TotalTime.GetValue(TimeUnits.Minute);
+        return new LineSummaryRow
+        {
+            LineName = l.Name,
+            Producing = producing,
+            Washing = l.LineReport.WashingTime.GetValue(TimeUnits.Minute),
+            ChangeOver = l.LineReport.ChangeOverTime.GetValue(TimeUnits.Minute),
+            LowLevelWip = l.LineReport.LowLevelWipTime.GetValue(TimeUnits.Minute),
+            PlannedDowntime = l.LineReport.PlannedDowntime.GetValue(TimeUnits.Minute),
+            NotScheduled = l.LineReport.NotScheduledTime.GetValue(TimeUnits.Minute),
+            TotalTime = total,
+            Utilization = total > 0 ? (producing / total) * 100 : 0
+        };
+    }).ToList();
+    private Color GetEfficiencyColor(double value) => value switch
+    {
+        > 80 => Color.Success,
+        > 50 => Color.Warning,
+        _ => Color.Error
+    };
+    public class LineSummaryRow
+    {
+        public string LineName { get; set; } = "";
+        public double Producing { get; set; }
+        public double Washing { get; set; }
+        public double ChangeOver { get; set; }
+        public double LowLevelWip { get; set; }
+        public double PlannedDowntime { get; set; }
+        public double NotScheduled { get; set; }
+        public double TotalTime { get; set; }
+        public double Utilization { get; set; }
+    }
+}

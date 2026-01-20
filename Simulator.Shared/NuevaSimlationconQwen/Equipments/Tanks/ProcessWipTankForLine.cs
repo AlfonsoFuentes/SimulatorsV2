@@ -1,6 +1,7 @@
 ﻿using Simulator.Shared.Enums.HCEnums.Enums;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Skids;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks.States;
@@ -50,7 +51,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
 
                         order.ReceiveWipCanHandleMaterial(this);
                         _CurrentOrder.AddMassProduced(CurrentLevel);
-                        
+
 
 
                     }
@@ -68,7 +69,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
 
                         order.ReceiveWipCanHandleMaterial(this);
                         _CurrentOrder.AddMassProduced(CurrentLevel);
-                        
+
                     }
                     else
                     {
@@ -367,51 +368,75 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
                 _CurrentOrder.AddMassProduced(mass);
             }
         }
-
-
         public bool IsMaterialNeeded()
         {
+            // 1. Verificación de orden activa
             if (_CurrentOrder is null) return false;
 
+            // 2. Obtención directa del Plan desde el Selector
+            // Reemplazamos el método intermedio por la llamada directa
+            var plan = SelectCandidateMixers(_CurrentOrder.Line, _CurrentOrder.Material);
 
-
-
-            var plan = GetTimeToProduceProduct(_CurrentOrder.Line, _CurrentOrder.Material);
-            if (plan.SelectedMixer is null || plan.SelectedRecipe is null)
+            if (plan.Mixer is null || plan.Recipe is null)
                 return false;
 
-            if (_CurrentOrder.TotalMassStoragedOrProducing.Value == 0)
-            {
-                return TryToStartNewOrder(_CurrentOrder, plan.SelectedMixer, plan.SelectedRecipe); ;
-            }
-            var futurelevel = _CurrentOrder.TotalMassStoragedOrProducing + plan.SelectedRecipe.BatchSize;
-            if (_CurrentOrder.TimeToEmptyMassInProcess.Value > 0)
-            {
-                var massoutletduringBatch = plan.TotalBatchTime * 0.85 * _CurrentOrder.AverageOutletFlow;
-                futurelevel -= massoutletduringBatch;
+            // 3. Cálculo de Masa Total (Inventario + Tránsito + Cola)
+            var currentTotalMass = _CurrentOrder.TotalMassStoragedOrProducing;
 
+            // 4. Caso de Emergencia: Tanque vacío
+            if (currentTotalMass.Value == 0)
+            {
+                return TryToStartNewOrder(_CurrentOrder, plan.Mixer, plan.Recipe);
             }
+
+            // 5. Proyección de Nivel Futuro (Balance de Masa)
+            // Sumamos la masa actual y el tamaño del nuevo lote potencial
+            var futureLevel = currentTotalMass + plan.Recipe.BatchSize;
+
+            // 6. Descuento por Consumo Proyectado (Salida del WIP)
+            if (_CurrentOrder.AverageOutletFlow.Value > 0)
+            {
+                // Usamos el 'TotalArrivalTime' calculado honestamente por el selector
+                // (Incluye cola, interferencia del operario y paradas programadas)
+                var effectiveConsumptionTime = plan.TotalArrivalTime;
+
+                // Aplicamos tu factor de seguridad del 15% (1.15) 
+                // para evitar el nivel crítico visto en WIPa#10
+                var massOutletDuringProcess = effectiveConsumptionTime * 1.15 * _CurrentOrder.AverageOutletFlow;
+
+                futureLevel -= massOutletDuringProcess;
+            }
+
+            // 7. Sumar Transferencias Activas (Seguridad adicional)
             if (CurrentTransferFromMixer != null)
             {
-                futurelevel += CurrentTransferFromMixer.PendingToReceive;
+                futureLevel += CurrentTransferFromMixer.PendingToReceive;
             }
-            if (futurelevel <= Capacity)
+
+            // 8. Validación de Capacidad Final
+            // Solo pedimos el lote si el nivel proyectado no desborda el tanque
+            if (futureLevel <= Capacity)
             {
-                return TryToStartNewOrder(_CurrentOrder, plan.SelectedMixer, plan.SelectedRecipe);
+                return TryToStartNewOrder(_CurrentOrder, plan.Mixer, plan.Recipe);
             }
 
             return false;
-
         }
+
+
         public bool TryToStartNewOrder(IWIPManufactureOrder order, ManufaturingEquipment mixer, IEquipmentMaterial recipe)
         {
             if (order is null) return false;
             var lastMixer = order.LastInOrder;
+
             if (lastMixer is null)
             {
                 StartNewOrder(order, mixer);
                 return true;
             }
+
+
+            // es mayor al tiempo que tardaremos en transferir, podemos encolar.
             if (lastMixer.ManufaturingEquipment.CurrentManufactureOrder.CurrentBatchTime > recipe.TransferTime)
             {
                 StartNewOrder(order, mixer);
@@ -419,88 +444,233 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
             }
             return false;
         }
+        public record MixerSelectionPlan(
+          ManufaturingEquipment Mixer,
+          IEquipmentMaterial Recipe,
+          Amount TotalArrivalTime,
+          Amount PreparationTime
+      );
         public void StartNewOrder(IWIPManufactureOrder order, ManufaturingEquipment mixer)
         {
             mixer.ReceiveManufactureOrderFromWIP(order);
         }
+        
 
-        (Amount TotalBatchTime, Amount BatchTime, ManufaturingEquipment SelectedMixer, IEquipmentMaterial SelectedRecipe)
-            GetTimeToProduceProduct(ProcessLine Line, IMaterial Material)
+
+        public MixerSelectionPlan SelectCandidateMixers(ProcessLine Line, IMaterial Material)
         {
-            var selectedMixerMaterial = SelectCandidateMixers(Line, Material);
-            if (selectedMixerMaterial.MixerCandidate is null)
-                return (new Amount(0, TimeUnits.Minute), new Amount(0, TimeUnits.Minute), null!, null!);
+            if (Material is null) return new MixerSelectionPlan(null!, null!, new Amount(0, TimeUnits.Minute), new Amount(0, TimeUnits.Minute));
 
-            //Added ten minutes by Unknow delays
-            Amount TenMinutes = new Amount(10, TimeUnits.Minute);
-
-            var washoutTime = GetWashoutTime(selectedMixerMaterial.MixerCandidate, Material);
-            var batchTime = selectedMixerMaterial.Recipe.BatchCycleTime;
-            var totalBatchtTime = batchTime + washoutTime;
-            var transferTime = selectedMixerMaterial.Recipe.TransferTime;
-            var totalTime = washoutTime + transferTime + batchTime;
-
-            return (totalTime, totalBatchtTime, selectedMixerMaterial.MixerCandidate, selectedMixerMaterial.Recipe);
-        }
-        (ManufaturingEquipment MixerCandidate, IEquipmentMaterial Recipe) SelectCandidateMixers(ProcessLine Line, IMaterial Material)
-        {
-            if (Material is null) return (null!, null!);
-            IEquipmentMaterial materialFromMixer = null!;
-            // 1. Preferidos libres
-            if (Line.PreferredManufacturer.Any())
-            {
-                var mixer = Line.PreferredManufacturer
-                    .FirstOrDefault(x => x.EquipmentMaterials.Any(m => m.Material.Id == Material.Id) && x.CurrentManufactureOrder == null);
-                if (mixer != null)
-                {
-                    materialFromMixer = SelectMaterialFromMixer(mixer, Material);
-                    return (mixer, materialFromMixer);
-                }
-            }
-            var mixers = InletMixers;
-            // 2. Todos los mezcladores que producen el material
-            var allMixersThatProduceMaterial = mixers
+            var allCompatible = InletMixers
                 .Where(x => x.EquipmentMaterials.Any(m => m.Material.Id == Material.Id))
                 .ToList();
 
-            if (allMixersThatProduceMaterial.Count == 0) return (null!, null!);
+            if (!allCompatible.Any()) return new MixerSelectionPlan(null!, null!, new Amount(0, TimeUnits.Minute), new Amount(0, TimeUnits.Minute));
 
-            // 3. Si alguno está libre → devolver el primero
+            // --- NIVEL 1: PREFERIDOS LIBRES ---
+            var preferredCandidates = allCompatible
+                 .Where(m => Line.PreferredManufacturer.Contains(m) && m.GetManufactureOrderCount() == 0)
+                 .ToList();
 
-            var freeMixers = allMixersThatProduceMaterial.Where(x => x.CurrentManufactureOrder == null).ToList();
-            var freeMixer = freeMixers.RandomElement(); // ← ¡Así de simple!
-            if (freeMixer != null)
+            if (preferredCandidates.Any())
             {
-                materialFromMixer = SelectMaterialFromMixer(freeMixer, Material);
-                return (freeMixer, materialFromMixer);
+                var mixer = preferredCandidates.First();
+                var recipe = mixer.EquipmentMaterials.First(x => x.Material.Id == Material.Id);
+
+                // Calculamos tiempos para un mixer libre
+                Amount washTime = GetWashoutTime(mixer, Material);
+                Amount batchTime = recipe.BatchCycleTime;
+                Amount opDelay = GetOperatorDownTimeDelay(mixer, new Amount(0, TimeUnits.Minute), washTime + batchTime);
+
+                Amount prepTime = washTime + batchTime + opDelay;
+                Amount arrivalTime = prepTime + recipe.TransferTime;
+
+                return new MixerSelectionPlan(mixer, recipe, arrivalTime, prepTime);
             }
 
-            // 4. Todos ocupados → buscar el primero que pueda encolar (batchTime > transferTime)
-            var orderedMixers = allMixersThatProduceMaterial
-                .OrderBy(x => x.CurrentManufactureOrder.CurrentBatchTime.GetValue(TimeUnits.Minute))
+            // --- NIVEL 2: RANKING POR PRODUCTIVIDAD (ETA REAL) ---
+            var totalRankings = allCompatible.Select(mixer =>
+            {
+                var recipe = mixer.EquipmentMaterials.First(m => m.Material.Id == Material.Id);
+                Amount totalMinutesToGetFree = new Amount(0, TimeUnits.Minute);
+
+                // 1. Interferencia del Operario
+                var op = mixer.InletEquipments.OfType<ProcessOperator>().FirstOrDefault();
+                if (op != null)
+                {
+                    if (op.OcuppiedBy != null && op.OcuppiedBy != mixer)
+                    {
+                        if (op.OcuppiedBy is ProcessMixer otherMixer)
+                            totalMinutesToGetFree += otherMixer.CurrentManufactureOrder?.PendingBatchTime ?? new Amount(0, TimeUnits.Minute);
+                    }
+                    else if (op.OcuppiedBy == null && op.OutletState is FeederPlannedDownTimeState)
+                    {
+                        var otherMixers = op.OutletMixers.Where(x => x != mixer).ToList();
+                        otherMixers.ForEach(x =>
+                        {
+                            if (x.CurrentManufactureOrder != null)
+                                totalMinutesToGetFree += x.CurrentManufactureOrder.PendingBatchTime ?? new Amount(0, TimeUnits.Minute);
+                        });
+                    }
+                }
+
+                // 2. Estado actual del Mixer (Producción o Transferencia)
+                if (mixer.CurrentManufactureOrder != null)
+                {
+                    totalMinutesToGetFree += ((MixerManufactureOrder)mixer.CurrentManufactureOrder).PendingBatchTime;
+                    totalMinutesToGetFree += ((MixerManufactureOrder)mixer.CurrentManufactureOrder).TransferTime;
+                }
+                else if (mixer.CurrentTransferRequest != null)
+                {
+                    totalMinutesToGetFree += mixer.CurrentTransferRequest.PendingTransferTime;
+                }
+
+                // 3. Órdenes en Cola
+                foreach (var nextMO in mixer.ManufacturingOrders)
+                {
+                    totalMinutesToGetFree += GetWashoutTime(mixer, nextMO.Material);
+                    totalMinutesToGetFree += ((MixerManufactureOrder)nextMO).BatchTime;
+                    totalMinutesToGetFree += ((MixerManufactureOrder)nextMO).TransferTime;
+                }
+
+                // 4. Preparación de la nueva orden
+                totalMinutesToGetFree += GetWashoutTime(mixer, Material);
+
+                // 5. Retraso por Almuerzos/Breaks
+                Amount opDelay = GetOperatorDownTimeDelay(mixer, totalMinutesToGetFree, recipe.BatchCycleTime);
+
+                Amount finalPrepTime = totalMinutesToGetFree + recipe.BatchCycleTime + opDelay;
+                Amount finalArrival = finalPrepTime + recipe.TransferTime;
+
+                // Score de productividad real (Kg/min)
+                double score = recipe.BatchSize.GetValue(MassUnits.KiloGram) / finalArrival.GetValue(TimeUnits.Minute);
+
+                return new
+                {
+                    Mixer = mixer,
+                    Recipe = recipe,
+                    Score = score,
+                    ETA = finalArrival,
+                    Prep = finalPrepTime
+                };
+            })
+            .OrderByDescending(x => x.Score)
+            .ToList();
+            var bestRanked = totalRankings.First();
+            return new MixerSelectionPlan(bestRanked.Mixer, bestRanked.Recipe, bestRanked.ETA, bestRanked.Prep);
+        }
+        (ManufaturingEquipment MixerCandidate, IEquipmentMaterial Recipe) SelectCandidateMixers2(ProcessLine Line, IMaterial Material)
+        {
+            if (Material is null) return (null!, null!);
+
+            // Filtramos todos los mixers que pueden producir este material
+            var allCompatible = InletMixers
+                .Where(x => x.EquipmentMaterials.Any(m => m.Material.Id == Material.Id))
                 .ToList();
 
-            //foreach (var candidate in orderedMixers)
-            //{
-            //    materialFromMixer = SelectMaterialFromMixer(candidate, Material);
-            //    // Asegúrate de que materialFromMixer no sea null
-            //    if (materialFromMixer != null &&
-            //        candidate.CurrentManufactureOrder.CurrentBatchTime > materialFromMixer.TransferTime)
-            //    {
+            if (!allCompatible.Any()) return (null!, null!);
 
-            //        return (candidate, materialFromMixer); // ¡Encontramos uno que puede encolar!
-            //    }
-            //}
-            var FirstMixer = orderedMixers.FirstOrDefault();
-            if (FirstMixer != null)
+            //   // --- NIVEL 1: OBLIGAR PREFERIDOS LIBRES ---
+            //   // Si un mixer preferido de la línea está desocupado, se asigna de inmediato.
+            var preferredCandidates = allCompatible
+                 .Where(m => Line.PreferredManufacturer.Contains(m))
+                 .Select(m => new
+                 {
+                     Mixer = m,
+                     OrderCount = m.GetManufactureOrderCount(), // Asumiendo este método en tu clase base
+                     Recipe = m.EquipmentMaterials.First(x => x.Material.Id == Material.Id)
+                 })
+                 .OrderBy(x => x.OrderCount) // Prioridad: Menor cola
+
+                 .ToList();
+
+            if (preferredCandidates.Any() && preferredCandidates.First().OrderCount == 0)
             {
-                materialFromMixer = SelectMaterialFromMixer(FirstMixer!, Material);
-                // 5. Si ninguno puede encolar → devolver el que termine primero
-                return (FirstMixer, materialFromMixer);
+                return (preferredCandidates.First().Mixer, preferredCandidates.First().Recipe);
             }
 
-            // 5. Si ninguno puede encolar → devolver el que termine primero
-            return (null!, null!);
+
+
+
+
+            // --- NIVEL 2: Buscamo por el menor tiempo en lliberrarse ---
+            // Si no hay nadie libre, evaluamos quién entregará masa más rápido considerando:
+            // Tiempo de batch actual + Lavado + Ciclo de producción.
+            var TotalbestOccupied = allCompatible.Select(mixer =>
+            {
+                var recipe = mixer.EquipmentMaterials.First(m => m.Material.Id == Material.Id);
+                Amount totalminutestoGetFree = new Amount(0, TimeUnits.Minute);
+                var op = mixer.InletEquipments.OfType<ProcessOperator>().FirstOrDefault();
+                if (op != null)
+                {
+                    // Caso 1: El operario está atendiendo a OTRO Mixer ahora mismo
+                    if (op.OcuppiedBy != null && op.OcuppiedBy != mixer)
+                    {
+                        if (op.OcuppiedBy is ProcessMixer otherMixer)
+                        {
+                            // El mixer actual no puede empezar su fase manual hasta que el otro termine
+                            totalminutestoGetFree += otherMixer.CurrentManufactureOrder?.PendingBatchTime ?? new Amount(0, TimeUnits.Minute);
+                        }
+                    }
+                    // Caso 2: El operario está en descanso programado (Almuerzo/Break)
+                    else if (op.OcuppiedBy == null && op.OutletState is FeederPlannedDownTimeState)
+                    {
+                        // Sumamos el tiempo de los otros mixers que están en cola para ser atendidos al regreso
+                        var otherMixers = op.OutletMixers.Where(x => x != mixer).ToList();
+                        otherMixers.ForEach(x =>
+                        {
+                            if (x.CurrentManufactureOrder != null)
+                                totalminutestoGetFree += x.CurrentManufactureOrder.PendingBatchTime ?? new Amount(0, TimeUnits.Minute);
+                        });
+                    }
+                }
+                if (mixer.CurrentManufactureOrder != null)
+                {
+                    totalminutestoGetFree += ((MixerManufactureOrder)mixer.CurrentManufactureOrder).PendingBatchTime;
+                    totalminutestoGetFree += ((MixerManufactureOrder)mixer.CurrentManufactureOrder).TransferTime;
+
+
+                }
+                else if (mixer.CurrentTransferRequest != null)
+                {
+                    totalminutestoGetFree += mixer.CurrentTransferRequest.PendingTransferTime;
+
+                }
+                foreach (var nextMO in mixer.ManufacturingOrders)
+                {
+                    totalminutestoGetFree += GetWashoutTime(mixer, nextMO.Material);
+                    totalminutestoGetFree += ((MixerManufactureOrder)nextMO).BatchTime;
+                    totalminutestoGetFree += ((MixerManufactureOrder)nextMO).TransferTime;
+                }
+                totalminutestoGetFree += GetWashoutTime(mixer, Material);
+                totalminutestoGetFree += recipe.BatchCycleTime;
+                totalminutestoGetFree += recipe.TransferTime;
+
+                Amount opDelay = GetOperatorDownTimeDelay(mixer, totalminutestoGetFree, recipe.BatchCycleTime);
+                totalminutestoGetFree += opDelay;
+                // ETA Total (minutos de simulación)
+                double totalArrivalMinutes = totalminutestoGetFree.GetValue(TimeUnits.Minute);
+
+                // Score = Masa / Tiempo. El que entregue más Kg/min es el ganador.
+                double massValue = recipe.BatchSize.GetValue(MassUnits.KiloGram);
+                double productivityScore = massValue / (totalArrivalMinutes > 0 ? totalArrivalMinutes : 1);
+
+                return new
+                {
+                    Mixer = mixer,
+                    Recipe = recipe,
+                    Score = productivityScore,
+
+                };
+            })
+
+            .OrderByDescending(x => x.Score)
+
+            .ToList();
+
+            var bestOccupied = TotalbestOccupied.First();
+
+            return (bestOccupied.Mixer, bestOccupied.Recipe);
         }
 
         Amount GetWashoutTime(ManufaturingEquipment mixer, IMaterial material)
@@ -570,8 +740,8 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
             if (nextproductionorder == null)
                 return false;
 
-            var productionPlan = GetTimeToProduceProduct(nextproductionorder.Line, nextproductionorder.Material);
-            if (productionPlan.SelectedMixer is null || productionPlan.SelectedRecipe is null)
+            var productionPlan = SelectCandidateMixers(nextproductionorder.Line, nextproductionorder.Material);
+            if (productionPlan.Mixer is null || productionPlan.Recipe is null)
                 return false;
 
             if (_CurrentOrder.AverageOutletFlow.Value <= 0)
@@ -600,7 +770,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
 
 
             // Total time for mixer to complete next batch (includes mixer washout + production)
-            var mixerTotalTime = productionPlan.BatchTime;
+            var mixerTotalTime = productionPlan.PreparationTime;
 
             if (_CurrentOrder.TimeToEmptyMassInProcess.Value > 0)
             {
@@ -627,8 +797,8 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
             if (_NextOrder == null || _CurrentOrder == null)
                 return false;
 
-            var productionPlan = GetTimeToProduceProduct(_NextOrder.Line, _NextOrder.Material);
-            if (productionPlan.SelectedMixer is null || productionPlan.SelectedRecipe is null)
+            var productionPlan = SelectCandidateMixers(_NextOrder.Line, _NextOrder.Material);
+            if (productionPlan.Mixer is null || productionPlan.Recipe is null)
                 return false;
 
             if (_CurrentOrder.AverageOutletFlow.Value <= 0)
@@ -652,7 +822,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
                 tankWashTime = changeovetime;
             }
             // Total time for mixer to complete next batch (includes mixer washout + production)
-            var mixerTotalTime = productionPlan.BatchTime;
+            var mixerTotalTime = productionPlan.PreparationTime;
 
             if (_NextOrder.TotalMassProducingInMixer == ZeroMass)
             {
@@ -661,15 +831,15 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
                 // Start mixer IF it will finish BEFORE or EXACTLY when tank is ready
                 if (timeUntilTankIsReady <= mixerTotalTime)
                 {
-                    return TryToStartNewOrder(_NextOrder, productionPlan.SelectedMixer, productionPlan.SelectedRecipe);
+                    return TryToStartNewOrder(_NextOrder, productionPlan.Mixer, productionPlan.Recipe);
                 }
             }
             else
             {
-                var futureLevel = _NextOrder.TotalMassProducingInMixer + productionPlan.SelectedRecipe.BatchSize;
+                var futureLevel = _NextOrder.TotalMassProducingInMixer + productionPlan.Recipe.BatchSize;
                 if (futureLevel <= Capacity)
                 {
-                    return TryToStartNewOrder(_NextOrder, productionPlan.SelectedMixer, productionPlan.SelectedRecipe);
+                    return TryToStartNewOrder(_NextOrder, productionPlan.Mixer, productionPlan.Recipe);
                 }
             }
 
@@ -677,7 +847,9 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
             return false;
         }
 
+        // Dentro de ProcessWipTankForLine.cs o en una clase de utilidad
 
+       
 
     }
 
