@@ -17,23 +17,29 @@
 
         <MudItem xs="12" md="7" Style="height: 100%;">
             <MudPaper Class="h-100 d-flex flex-column" Elevation="2">
-                <div class="pa-2 border-b-2 mud-theme-primary lighten-5">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Primary"><b>🧠 DECISION LOGIC</b></MudText>
+                <div class="pa-2 border-b-2">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Success"><b>🧠 DECISION LOGIC</b></MudText>
                 </div>
+               
                 <div class="flex-grow-1 overflow-auto">
                     <MudTable Items="@Scheduler?.DemandSnapshot" Dense="true" Hover="true" FixedHeader="true" Striped="true" Elevation="0">
                         <HeaderContent>
                             <MudTh>Tank</MudTh>
+                            <MudTh>Line</MudTh>
                             <MudTh>Autonomy</MudTh>
-                            <MudTh>Decision / Reason</MudTh>
-                            <MudTh>Assigned To</MudTh>
+                            <MudTh>Mass in Process</MudTh>
+                            <MudTh>Mixer assigned</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd>
                                 <MudText Typo="Typo.body2" Style="font-weight:bold;">@context.TankName</MudText>
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.ProductName</MudText>
                             </MudTd>
-
+                            <MudTd>
+                                <MudText Typo="Typo.body2">
+                                    <b>@context.Linename</b>
+                                </MudText>
+                            </MudTd>
                             <MudTd>
                                 <MudText Typo="Typo.body2" Color="@(context.TimeToEmpty < 60 ? Color.Error : Color.Inherit)">
                                     <b>@context.TimeToEmpty.ToString("F0") min</b>
@@ -41,22 +47,9 @@
                             </MudTd>
 
                             <MudTd>
-                                @if (context.StatusColor == "Success")
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">@context.DecisionLogic</MudChip>
-                                }
-                                else if (context.StatusColor == "Warning")
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.PanTool">@context.DecisionLogic</MudChip>
-                                }
-                                else if (context.StatusColor == "Error")
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Error">@context.DecisionLogic</MudChip>
-                                }
-                                else
-                                {
-                                    <MudText Typo="Typo.caption">@context.DecisionLogic</MudText>
-                                }
+                                <MudText Typo="Typo.body2" Color="@(context.TimeToEmpty < 60 ? Color.Error : Color.Inherit)">
+                                    <b>@context.TotalStorage</b>
+                                </MudText>
                             </MudTd>
 
                             <MudTd>

@@ -13,29 +13,12 @@ namespace GeminiSimulator.PlantUnits.Tanks
     public class WipTank : ProcessTank
     {
 
-        protected PackagingLine? CurrentLine { get; set; }
+        public PackagingLine? CurrentLine { get; set; }
         protected double MassPendingToSendToLine { get; set; }
         public double MassPendingToProduce { get; set; }
 
 
-        private double ProductionRatePerSecond
-        {
-            get
-            {
-                if (TotalSeconds == 0) return 0;
-                return TotalMassProduced / TotalSeconds;
-            }
-        }
-        private double TotalMassInProcess => MassScheduledToReceive + CurrentLevel;
-
-        public Amount MassInProcess => new Amount(TotalMassInProcess, MassUnits.KiloGram);
-
-        public override Amount AverageOutleFlow => new Amount(ProductionRatePerSecond, MassFlowUnits.Kg_sg);
-        double PendingTimeToEmptyVesselSeconds =>
-            ProductionRatePerSecond == 0 ? 0 : TotalMassInProcess / ProductionRatePerSecond;
-
-        public override Amount PendingTimeToEmptyVessel =>
-            new Amount(PendingTimeToEmptyVesselSeconds, TimeUnits.Second);
+      
 
 
         public void CountersToZero()

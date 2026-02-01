@@ -1,25 +1,5 @@
 ﻿@using GeminiSimulator.DesignPatterns
-@* <div class="unit-card">
-    @if (Snapshot != null)
-    {
-        @foreach (var field in Snapshot)
-        {
-            <div class="field-row">
-                @if (field.Key != "Header") // El Header lo usamos para el título
-                {
-                    <span class="label">@field.Key:</span>
-                }
 
-                <span style="color: @field.Value.Color;
-                                     font-weight: @(field.Value.IsBold ? "bold" : "normal");
-                                     font-size: @field.Value.TextSize;"
-                      class="@field.Value.CssClass">
-                    @field.Value.Value
-                </span>
-            </div>
-        }
-    }
-</div> *@
 
 <MudPaper Elevation="1" Class="pa-2 mb-2" Style="border-left: 4px solid #555; min-width: 180px;">
     @if (Snapshot != null)

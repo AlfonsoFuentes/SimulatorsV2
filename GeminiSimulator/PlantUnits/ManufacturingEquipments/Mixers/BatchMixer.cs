@@ -27,17 +27,22 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
     }
     public class BatchMixer : EquipmentManufacture
     {
-        private OptimizationEngine _ai=null!;
+        
+        private readonly Dictionary<MixerStateCategory, double> _stateAccumulator = new();
+        public Dictionary<MixerStateCategory, double> StateAcumulator=> _stateAccumulator;
+
+        private OptimizationEngine _ai = null!;
 
         public void SetOptimizationEngine(OptimizationEngine ai)
         {
             _ai = ai;
         }
-        private readonly Dictionary<MixerStateCategory, double> _stateAccumulator = new();
+
         // --- ESTADO FÍSICO ---
         public double Capacity { get; private set; }
         public double CurrentMass { get; set; }
         public double DischargeRate { get; private set; }
+        public double DischargeTimeInSeconds => DischargeRate == 0 ? 100000 : Capacity / DischargeRate;
 
         // --- CONTEXTO DE PRODUCCIÓN ---
         public ProductDefinition? LastMaterialProcessed { get; set; }
@@ -122,7 +127,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
             OutletPump = Outputs.OfType<Pump>().FirstOrDefault() ?? null;
             DischargeRate = OutletPump?.NominalFlowRate.GetValue(MassFlowUnits.Kg_sg) ?? 0;
             EngagementType = Context?.OperatorEngagementType ?? OperatorEngagementType.Infinite;
-           
+
             WashingPump = Inputs.OfType<Pump>().FirstOrDefault(x => x.IsForWashing) ?? null;
             InletPumps = Inputs.OfType<Pump>().Where(x => !x.IsForWashing).ToList() ?? new();
             // Inicio en Idle
@@ -171,6 +176,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
 
 
         }
+       
         public int CounterOperatorRelease = 0;
         public double PendingOperatorRealse => OperatorStdSetupTime - CounterOperatorRelease;
 
@@ -305,12 +311,12 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
             {
                 if (BatchOperator?.CurrentOwner == this)
                 {
-                    if(PendingOperatorRealse <= 0)
+                    if (PendingOperatorRealse <= 0)
                     {
                         BatchOperator?.ReleaseAccess(this);
                         CounterOperatorRelease = 0;
                     }
-                   
+
                 }
 
             }
@@ -323,7 +329,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
                 {
                     CounterOperatorRelease++;
                 }
-               
+
             }
         }
         // Helper para exponer la transición protegida

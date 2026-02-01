@@ -22,6 +22,8 @@ namespace GeminiSimulator.PlantUnits.Lines
     public class PackagingLine : PlantUnit
     {
         private readonly Dictionary<LineStateCategory, double> _stateAccumulator = new();
+
+        public Dictionary<LineStateCategory, double>   StateAcumulator=> _stateAccumulator;
         public override Dictionary<string, ReportField> GetReportData()
         {
             var data = base.GetReportData(); // Trae el "Name"

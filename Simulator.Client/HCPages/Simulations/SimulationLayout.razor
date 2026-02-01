@@ -37,7 +37,30 @@
         <MudDivider Class="mb-3" />
 
         <MudStack Spacing="2">
-            @foreach (var pair in Engine.WipLinePairList)
+            @foreach (var line in Engine.WipLinePairList.GroupBy(x => x.LineId).ToList())
+            {
+                <div class="d-flex align-center gap-2">
+
+                    <div style="flex: 1;">
+                        <MudStack>
+                            @foreach (var wip in Engine.WipLinePairList.Where(x => x.LineId == line.Key))
+                            {
+
+                                <UnitCard Snapshot="GetSnapshot(wip.WipId)" />
+
+                            }
+                        </MudStack>
+                    </div>
+
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward"
+                             Size="Size.Small"
+                             Style="color: #bdbdbd;" />
+                    <div style="flex: 1;">
+                        <UnitCard Snapshot="GetSnapshot(line.Key)" />
+                    </div>
+                </div>
+            }
+            @*      @foreach (var pair in Engine.WipLinePairList)
             {
                 <div class="d-flex align-center gap-2">
                     <div style="flex: 1;">
@@ -52,7 +75,7 @@
                         <UnitCard Snapshot="GetSnapshot(pair.LineId)" />
                     </div>
                 </div>
-            }
+            } *@
         </MudStack>
     </MudItem>
 </MudGrid>
@@ -67,5 +90,5 @@
     }
 
     // Ahora los métodos que definimos antes usan el parámetro 'Engine'
-   
+
 }

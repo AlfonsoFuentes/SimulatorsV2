@@ -1,0 +1,154 @@
+﻿@using GeminiSimulator.PlantUnits.Lines
+@using MudBlazor
+@using System.Linq
+@using GeminiSimulator.Main
+
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+
+    <MudPaper Class="pa-4 mb-4" Elevation="3">
+        <div class="d-flex flex-wrap justify-space-between align-center gap-4">
+            <div>
+                <MudText Typo="Typo.h5"><b>📦 Packaging Lines Performance</b></MudText>
+                <MudText Typo="Typo.caption">Availability & Loss Analysis per Line</MudText>
+            </div>
+
+            <div class="d-flex gap-2 align-center flex-wrap">
+                <MudChip T="string" Size="Size.Small" Style="background-color:#4CAF50; color:white;">Operating</MudChip>
+                <MudChip T="string" Size="Size.Small" Style="background-color:#FF9800; color:white;">Supply Loss</MudChip>
+                <MudChip T="string" Size="Size.Small" Style="background-color:#F44336; color:white;">Tech Loss</MudChip>
+                <MudChip T="string" Size="Size.Small" Style="background-color:#2196F3; color:white;">Planned</MudChip>
+                <MudChip T="string" Size="Size.Small" Style="background-color:#9E9E9E; color:white;">Org. Loss</MudChip>
+            </div>
+        </div>
+    </MudPaper>
+
+    <MudGrid>
+        @foreach (var line in SortedLines)
+        {
+            var stats = GetLineStats(line);
+
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="3" Class="h-100 d-flex flex-column">
+
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <div class="d-flex justify-space-between align-start">
+                                <div>
+                                    <MudText Typo="Typo.h6"><b>@line.Name</b></MudText>
+                                    <MudText Typo="Typo.caption">Total: @FormatTime(stats.TotalTime)</MudText>
+                                </div>
+                                <div class="d-flex flex-column align-end">
+                                    <MudChip T="string" Color="@GetEfficiencyColor(stats.Availability)" Size="Size.Small" Variant="Variant.Filled" Class="mb-0">
+                                        @stats.Availability.ToString("F0")% Avail.
+                                    </MudChip>
+                                </div>
+                            </div>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+
+                    <MudCardContent Class="d-flex flex-column align-center justify-center flex-grow-1">
+                        @if (stats.TotalTime > 0)
+                        {
+                            <MudChart ChartType="ChartType.Donut"
+                                      Width="120px"
+                                      Height="120px"
+                                      InputData="@stats.ChartData"
+                                      InputLabels="@_chartLabels"
+                                      ChartOptions="@_chartOptions" />
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="my-4">Line stopped / No Data</MudAlert>
+                        }
+                    </MudCardContent>
+
+                    <MudCardActions Class="d-flex justify-space-between px-4 py-2" Style="background-color:var(--mud-palette-background-grey);">
+
+                        <div class="d-flex flex-column align-center" Title="Operating Time">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                            <MudText Typo="Typo.caption" Style="font-weight:bold;">@FormatTime(stats.Operating)</MudText>
+                        </div>
+
+                        <div class="d-flex flex-column align-center" Title="Supply Loss (Starved)">
+                            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Warning" Size="Size.Small" />
+                            <MudText Typo="Typo.caption">@FormatTime(stats.SupplyLoss)</MudText>
+                        </div>
+
+                        <div class="d-flex flex-column align-center" Title="Technical Loss (Breakdown)">
+                            <MudIcon Icon="@Icons.Material.Filled.Build" Color="Color.Error" Size="Size.Small" />
+                            <MudText Typo="Typo.caption">@FormatTime(stats.TechLoss)</MudText>
+                        </div>
+
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter] public SimulationEngine Engine { get; set; } = null!;
+
+    // Filtramos solo las unidades que sean PackagingLine
+    private IEnumerable<PackagingLine> SortedLines =>
+        Engine?.Lines.OrderBy(l => l.Name)
+        ?? Enumerable.Empty<PackagingLine>();
+
+    // --- CONFIGURACIÓN VISUAL ESTÁTICA ---
+
+    // El orden AQUÍ debe coincidir con el orden del array 'ChartData' más abajo
+    private string[] _chartLabels = { "Operating", "Supply Loss", "Tech Loss", "Planned", "Org Loss" };
+
+    private ChartOptions _chartOptions = new ChartOptions
+    {
+        // 1. Verde, 2. Naranja, 3. Rojo, 4. Azul, 5. Gris
+        ChartPalette = new[] { "#4CAF50", "#FF9800", "#F44336", "#2196F3", "#9E9E9E" },
+        ShowLegend = true
+    };
+
+    // --- LÓGICA DE CÁLCULO ---
+
+    private record LineStats(double TotalTime, double Operating, double SupplyLoss, double TechLoss, double PlannedLoss, double OrgLoss, double Availability, double[] ChartData);
+
+    private LineStats GetLineStats(PackagingLine line)
+    {
+        // 1. Extraer valores del acumulador (safe get)
+        double op = GetTime(line, LineStateCategory.Operating);
+        double supply = GetTime(line, LineStateCategory.SupplyLoss);
+        double tech = GetTime(line, LineStateCategory.TechnicalLoss);
+        double planned = GetTime(line, LineStateCategory.PlannedLoss);
+        double org = GetTime(line, LineStateCategory.OrganizationalLoss);
+
+        double total = op + supply + tech + planned + org;
+
+        // 2. Calcular Disponibilidad (Availability)
+        // Ojo: Normalmente OEE excluye 'OrganizationalLoss' del denominador.
+        // Aquí usaremos (Operating / (Total - OrgLoss)) si quieres Disponibilidad Operativa,
+        // o (Operating / Total) para Utilización Total. Usaré Utilización Total para simplificar el gráfico.
+        double activeTime = total - org;
+        double avail = activeTime > 0 ? (op / activeTime) * 100 : 0;
+
+        // 3. Array para el Chart (Mismo orden que _chartLabels)
+        double[] data = { op, supply, tech, planned, org };
+
+        return new LineStats(total, op, supply, tech, planned, org, avail, data);
+    }
+
+    private double GetTime(PackagingLine l, LineStateCategory cat) =>
+        l.StateAcumulator.ContainsKey(cat) ? l.StateAcumulator[cat] : 0;
+
+    private string FormatTime(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        if (ts.TotalHours >= 1) return $"{ts.TotalHours:F1}h";
+        return $"{ts.TotalMinutes:F0}m";
+    }
+
+    private Color GetEfficiencyColor(double val) => val switch
+    {
+        > 85 => Color.Success, // World Class
+        > 65 => Color.Warning,
+        _ => Color.Error
+    };
+}

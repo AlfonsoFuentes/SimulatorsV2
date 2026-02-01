@@ -115,7 +115,25 @@ namespace GeminiSimulator.Main
                 Console.WriteLine($"[...] Ejecutando {loader.GetType().Name}...");
                 loader.Load(planData);
             }
+            if(planData.OperatorHasNotRestrictionToInitBatch)
+            {
+                               Console.WriteLine("--- Configurando Operadores sin Restricciones de Inicio de Lotes ---");
+                _context.OperatorEngagementType = PlantUnits.ManufacturingEquipments.Mixers.OperatorEngagementType.Infinite;
 
+
+            }
+            else
+            {
+                if(planData.MaxRestrictionTimeValue>0)
+                {
+                    _context.OperatorEngagementType = PlantUnits.ManufacturingEquipments.Mixers.OperatorEngagementType.StartOnDefinedTime;
+                    _context.TimeOperatorOcupy = planData.MaxRestrictionTime;
+                }
+                else
+                {
+                    _context.OperatorEngagementType = PlantUnits.ManufacturingEquipments.Mixers.OperatorEngagementType.FullBatch;
+                }
+            }
             Console.WriteLine("=== PLAN APLICADO EXITOSAMENTE ===");
         }
         void SpecializedVesselReads()

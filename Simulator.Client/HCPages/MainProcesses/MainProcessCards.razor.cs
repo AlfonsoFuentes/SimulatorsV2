@@ -233,7 +233,7 @@ namespace Simulator.Client.HCPages.MainProcesses
             SelectedPlanned = planned;
             if (!SimulationLoading && Simulation != null)
             {
-                Simulation.SetPlanned(planned);
+               
                 Showplanned = false;
                 _builder.ApplyProductionPlan(SelectedPlanned);
                 _engine = new SimulationEngine(Context, Context.Scenario!);

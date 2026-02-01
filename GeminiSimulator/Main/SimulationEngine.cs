@@ -23,9 +23,9 @@ namespace GeminiSimulator.Main
         private List<PlantUnit> _executionOrder = new();
 
         public List<PlantUnit> RawMaterialVessels { get; set; } = new();
-        public List<PlantUnit> Manufacturing { get; set; } = new();
+        public List<BatchMixer> Mixers => _executionOrder.OfType<BatchMixer>().Where(x => x.Materials.All(x => x.IsFinishedProduct)).ToList();
         public List<PlantUnit> WipTanks { get; set; } = new();
-        public List<PlantUnit> Lines { get; set; } = new();
+        public List<PackagingLine> Lines => _executionOrder.OfType<PackagingLine>().ToList();
         public DateTime CurrentTime { get; private set; }
         public SimulationEngine(SimulationContext context, SimulationScenario scenario)
         {
@@ -262,11 +262,22 @@ namespace GeminiSimulator.Main
             // Por ahora, asumimos que existe una relación 1:1 en el orden
             var wips = _executionOrder.OfType<WipTank>().ToList();
             var lines = _executionOrder.OfType<PackagingLine>().ToList();
+            List<WipLinePair> result = new();
 
-            for (int i = 0; i < Math.Min(wips.Count, lines.Count); i++)
+            foreach (var line in lines)
             {
-                yield return new WipLinePair(wips[i].Id, lines[i].Id);
+                var wiptankss = line.Inputs.SelectMany(x => x.Inputs.OfType<WipTank>()).ToList();
+
+                foreach (var wiptank in wiptankss)
+                {
+                    result.Add(new WipLinePair(wiptank.Id, line.Id));
+                }
             }
+            return result;
+            //for (int i = 0; i < Math.Min(wips.Count, lines.Count); i++)
+            //{
+            //    yield return new WipLinePair(wips[i].Id, lines[i].Id);
+            //}
         }
         public enum EquipmentGroup
         {

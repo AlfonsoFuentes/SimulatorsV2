@@ -46,6 +46,12 @@
             <MudTabPanel Text="Scheduler">
                 <SchedulerDashBoard Engine="@Engine" Scheduler="@Scheduler" />
             </MudTabPanel>
+            <MudTabPanel Text="Mixer metrics">
+                <MixerMetricsDashBoard Engine="@Engine"></MixerMetricsDashBoard>
+            </MudTabPanel>
+            <MudTabPanel Text="Line metrics">
+                <LineMetrixDashBoard Engine="@Engine"></LineMetrixDashBoard>
+            </MudTabPanel>
         </MudTabs>
     </MudContainer>
 }
@@ -64,14 +70,13 @@ else
 
     // Control de Hilos
     private CancellationTokenSource? _cts;
-    private PeriodicTimer? _uiTimer;
-    private bool _isUiLoopRunning = false;
+
 
 
     override protected void OnInitialized()
     {
-       
-        
+
+
     }
     async Task UpdateSimulation()
     {
@@ -87,8 +92,8 @@ else
         // Inicialización visual inicial
         if (Engine != null)
         {
-           
-          
+
+
             Engine.UpdateModel = UpdateSimulation;
         }
     }
@@ -103,54 +108,20 @@ else
         // 2. ARRANCAR ENGINE (Fire and Forget seguro)
         // No usamos await aquí para no bloquear la UI. El Engine corre en su Task.
         // Usamos un Progress vacío o nulo si tu Engine lo permite, para no saturar.
-       
 
-        await Engine.RunAsync( _cts);
 
-        // // 3. ARRANCAR EL BUCLE DE UI (Separado del cálculo)
-        // if (!_isUiLoopRunning)
-        // {
-        //     _isUiLoopRunning = true;
-        //     _ = RunUiLoopAsync();
-        // }
+        await Engine.RunAsync(_cts);
+
+
     }
 
-    // private async Task RunUiLoopAsync()
-    // {
-    //     // 50ms = 20 FPS. Suficiente para el ojo humano, muy descansado para el CPU.
-    //     _uiTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
 
-    //     while (await _uiTimer.WaitForNextTickAsync())
-    //     {
-    //         if (Engine == null || _cts?.IsCancellationRequested == true) break;
-
-    //         // SOLO ACTUALIZAMOS DATOS SI EL ENGINE ESTÁ CORRIENDO
-    //         if (Engine.Status == EngineStatus.Running)
-    //         {
-    //             // Jalar datos manualmente del Engine (Polling)
-    //             _displayTime = Engine.CurrentTime;
-
-    //             // Asumiendo que Engine expone su último Snapshot o Scheduler publicamente
-    //             // Si no tienes LatestSnapshot publico en Engine, usa Engine.Scheduler directamente
-    //             Scheduler = Engine.Scheduler;
-
-    //             // NOTA: Si necesitas el Snapshot exacto, asegúrate que Engine tenga una propiedad
-    //             // publica como Engine.LastSnapshot
-    //             // LatestSnapshot = Engine.LastSnapshot;
-
-    //             // Notificar a Blazor que repinte
-    //             await InvokeAsync(StateHasChanged);
-    //         }
-    //     }
-    //     _isUiLoopRunning = false;
-    // }
 
     private void StopSimulation()
     {
         Engine?.Stop();
         _cts?.Cancel();
-        _uiTimer?.Dispose(); // Detiene el bucle de UI
-        _isUiLoopRunning = false;
+
     }
 
     private void TogglePause()
@@ -162,6 +133,6 @@ else
     public void Dispose()
     {
         _cts?.Cancel();
-        _uiTimer?.Dispose();
+
     }
 }

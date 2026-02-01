@@ -71,9 +71,23 @@ namespace GeminiSimulator.PlantUnits.Tanks
     }
     public abstract class ProcessTank : StorageTank
     {
-        public virtual Amount AverageOutleFlow => new Amount(0, MassFlowUnits.Kg_sg);
-        public virtual Amount PendingTimeToEmptyVessel =>
-           new Amount(0, TimeUnits.Second);
+       
+        private double ProductionRatePerSecond
+        {
+            get
+            {
+                if (TotalSeconds == 0) return 0;
+                return TotalMassProduced / TotalSeconds;
+            }
+        }
+
+
+        public  Amount AverageOutleFlow => new Amount(ProductionRatePerSecond, MassFlowUnits.Kg_sg);
+        double PendingTimeToEmptyVesselSeconds =>
+            ProductionRatePerSecond == 0 ? 0 : TotalMassInProcess / ProductionRatePerSecond;
+
+        public  Amount PendingTimeToEmptyVessel =>
+            new Amount(PendingTimeToEmptyVesselSeconds, TimeUnits.Second);
         public ProductDefinition? CurrentMaterial { get; private set; }
         // Constructor de copia: Pasa los datos del StorageTank "plano" al especializado
         protected List<Pump> _outletPumps = new();
@@ -92,6 +106,9 @@ namespace GeminiSimulator.PlantUnits.Tanks
             }
 
         }
+        public double TotalMassInProcess => MassScheduledToReceive + CurrentLevel;
+
+        public Amount MassInProcess => new Amount(TotalMassInProcess, MassUnits.KiloGram);
         public double MassScheduledToReceive { get; private set; }
         public void AddMassScheduledToReceive(double mass)
         {
@@ -325,24 +342,7 @@ namespace GeminiSimulator.PlantUnits.Tanks
 
         }
 
-        private double ProductionRatePerSecond
-        {
-            get
-            {
-                if (TotalSeconds == 0) return 0;
-                return TotalMassProduced / TotalSeconds;
-            }
-        }
-        private double TotalMassInProcess => MassScheduledToReceive + CurrentLevel;
-
-        public Amount MassInProcess => new Amount(TotalMassInProcess, MassUnits.KiloGram);
-
-        public override Amount AverageOutleFlow => new Amount(ProductionRatePerSecond, MassFlowUnits.Kg_sg);
-        double PendingTimeToEmptyVesselSeconds =>
-            ProductionRatePerSecond == 0 ? 0 : TotalMassInProcess / ProductionRatePerSecond;
-
-        public override Amount PendingTimeToEmptyVessel =>
-            new Amount(PendingTimeToEmptyVesselSeconds, TimeUnits.Second);
+       
 
        
         public void CountersToZero()

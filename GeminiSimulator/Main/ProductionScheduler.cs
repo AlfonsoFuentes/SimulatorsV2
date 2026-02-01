@@ -10,8 +10,10 @@ namespace GeminiSimulator.Main
     public record DemandLog(
          string TankName,
          string ProductName,
+         string Linename,
          double TimeToEmpty,
-         string DecisionLogic,   // <--- EL DATO NUEVO: ¿Por qué no se programó?
+         int BatchTime,
+         string TotalStorage,   // <--- EL DATO NUEVO: ¿Por qué no se programó?
          string AssignedMixer,   // <--- EL DATO NUEVO: Nombre exacto del mixer si se asignó
          string StatusColor,     // Para la UI (Success, Warning, Error, Info)
          bool IsInHouse
@@ -57,7 +59,7 @@ namespace GeminiSimulator.Main
 
             // Filtro de seguridad (Null check)
             var mixers = _context.Mixers.Values
-                .Where(m => m.Materials != null && m.Materials.Any(mat => mat.IsFinishedProduct))
+                .Where(m => m.Materials != null && m.Materials.Any(mat => mat.IsFinishedProduct) && m.InboundState != null)
                 .OrderBy(m => m.Name)
                 .ToList();
 
@@ -91,7 +93,7 @@ namespace GeminiSimulator.Main
                     // Esto le enseña al usuario que el proceso se está demorando más de lo previsto.
                     timeToFree = remaining > 0 ? remaining / 60.0 : 0;
 
-                    targetTank = mixer.CurrentMaterial?.Name ?? "Processing...";
+                    targetTank = mixer.CurrentWipTank?.Name ?? "";
                 }
 
                 supplyList.Add(new SupplyLog(
@@ -103,7 +105,7 @@ namespace GeminiSimulator.Main
                     queueNames
                 ));
             }
-            SupplySnapshot = supplyList.OrderBy(x => x.EtaMinutes).ToList();
+            SupplySnapshot = supplyList.OrderBy(x => x.MixerName).ThenBy(x => x.EtaMinutes).ToList();
 
             // =================================================================
             // PARTE B: LOGICA DE DEMANDA (El Cerebro del Scheduler)
@@ -112,45 +114,26 @@ namespace GeminiSimulator.Main
             var allNeeds = GatherAllNeeds();
             var sortedNeeds = allNeeds.OrderBy(n => n.SlackTimeMinutes).ToList();
 
-            var logicTrace = new Dictionary<string, (string Reason, string Mixer, string Color)>();
+            var logicTrace = new Dictionary<string, (string Reason, BatchMixer? Mixer, string Color)>();
 
             foreach (var need in sortedNeeds)
             {
                 // 1. CÁLCULOS MATEMÁTICOS
-                double virtualLevel = need.Tank.CurrentLevel + need.Tank.MassScheduledToReceive;
+                double virtualLevel = need.Tank.TotalMassInProcess;
                 double capacity = need.Tank.WorkingCapacity.GetValue(MassUnits.KiloGram);
                 double utilization = capacity > 0 ? (virtualLevel / capacity) * 100 : 0;
-
+                var bestMixer = FindBestMixerFor(need.Product, need.IsInHouse);
                 // --- CHECK 1: PIPELINE FULL? ---
-                if (utilization > 95)
-                {
-                    logicTrace[need.Tank.Name] = ($"Pipeline Full (Virt: {utilization:F0}%)", "--", "Success");
-                    continue;
-                }
-
-                // --- CHECK 2: ENTRADA FISICA OCUPADA? ---
-                if (need.Tank.InboundState is TankReceiving)
-                {
-                    logicTrace[need.Tank.Name] = ("Physical Inlet Busy", "--", "Warning");
-                    continue;
-                }
-
-                // --- CHECK 3: BUSCANDO NOVIO (MIXER) ---
-                // IMPORTANTE: Tu método FindBestMixerFor DEBE usar _ai internamente
-                // para elegir el mixer más rápido o eficiente según el aprendizaje.
-                var bestMixer = FindBestMixerFor(need);
-
                 if (bestMixer == null)
                 {
-                    logicTrace[need.Tank.Name] = ("No Compatible Mixer", "--", "Error");
+                    logicTrace[need.Tank.Name] = ("No Compatible Mixer", null!, "Error");
                     continue;
                 }
-
                 // --- CHECK 4: ASIGNACIÓN EXITOSA ---
                 if (need.IsInHouse) bestMixer.ReceivePriorityRequirementBatch(need.Tank);
                 else bestMixer.ReceiveRequirementBatch(need.Tank);
 
-                logicTrace[need.Tank.Name] = ("Assigned & Scheduled", bestMixer.Name, "Info");
+                logicTrace[need.Tank.Name] = ("Assigned & Scheduled", bestMixer, "Info");
             }
 
             // =================================================================
@@ -158,15 +141,18 @@ namespace GeminiSimulator.Main
             // =================================================================
             var demandList = new List<DemandLog>();
 
-            var allTanks = _context.Tanks.Values
-                    .OfType<ProcessTank>()
-                    .Where(t => t is WipTank || t is InHouseTank)
-                    .ToList();
+            var wiptans = _context.Tanks.Values
+                    .OfType<BatchWipTank>()
+                    .Where(t => t.CurrentLine != null).Select(x => x as ProcessTank).ToList();
+            var InHouseTanks = _context.Tanks.Values
+                    .OfType<InHouseTank>().Select(x => x as ProcessTank).ToList();
+
+            var allTanks = wiptans.Concat(InHouseTanks).ToList();
 
             foreach (var tank in allTanks)
             {
                 string reason = "Stable / No Demand";
-                string mixer = "--";
+                BatchMixer? mixer = mixers.FirstOrDefault(x => x.CurrentWipTank == tank);
                 string color = "Default";
                 double timeToEmpty = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
 
@@ -176,25 +162,19 @@ namespace GeminiSimulator.Main
                 {
                     var trace = logicTrace[tank.Name];
                     reason = trace.Reason;
-                    mixer = trace.Mixer;
+                   
                     color = trace.Color;
                 }
-                else if (tank.MassScheduledToReceive > 0)
-                {
-                    reason = "Incoming Load (Prev Cycle)";
-                    color = "Success";
-                }
-                else if (tank.CurrentLevel < 100)
-                {
-                    reason = "Idle / Not Configured";
-                }
+                 string linename=tank is WipTank wipTank && wipTank.CurrentLine != null ? wipTank.CurrentLine.Name : "--";
 
                 demandList.Add(new DemandLog(
                     tank.Name,
                     tank.CurrentMaterial?.Name ?? "Empty",
+                      linename,
                     timeToEmpty,
-                    reason,
-                    mixer,
+                    mixer?.NetBatchTimeInSeconds ?? 0,
+                    $"{tank.TotalMassInProcess:F0}, Kg",
+                    mixer?.Name ?? "--",
                     color,
                     isVip
                 ));
@@ -220,598 +200,7 @@ namespace GeminiSimulator.Main
                 .ThenBy(x => x.TimeToEmpty)
                 .ToList();
         }
-        public void Execute23(DateTime currentTime)
-        {
-            // =================================================================
-            // PARTE A: LOGICA DE OFERTA (Mixers) - SOLO PRODUCTO TERMINADO
-            // =================================================================
-            var supplyList = new List<SupplyLog>();
 
-            // CORRECCIÓN 1: Null Check y Lambda clara (m => m...) para evitar errores
-            var mixers = _context.Mixers.Values
-                .Where(m => m.Materials != null && m.Materials.Any(mat => mat.IsFinishedProduct))
-                .OrderBy(m => m.Name)
-                .ToList();
-
-            foreach (var mixer in mixers)
-            {
-                double timeToFree = 0;
-                string targetTank = "--";
-
-                // Copia de seguridad de la lista para evitar conflictos de hilos
-                var queueNames = mixer.WipsQueue.Select(t => t.Name).ToList();
-
-                if (mixer.InboundState is not MixerIdle)
-                {
-                    double totalEst = 3600; // Idealmente usar _ai.GetEstimatedTime...
-                    double remaining = totalEst - mixer.NetBatchTimeInSeconds;
-                    timeToFree = remaining > 0 ? remaining / 60.0 : 0;
-
-                    targetTank = mixer.CurrentMaterial?.Name ?? "Processing...";
-                }
-
-                supplyList.Add(new SupplyLog(
-                    mixer.Name,
-                    mixer.InboundState?.StateName ?? "Off",
-                    mixer.CurrentMaterial?.Name ?? "--",
-                    targetTank,
-                    timeToFree,
-                    queueNames
-                ));
-            }
-            SupplySnapshot = supplyList.OrderBy(x => x.EtaMinutes).ToList();
-
-            // =================================================================
-            // PARTE B: LOGICA DE DEMANDA (El Cerebro del Scheduler)
-            // =================================================================
-
-            var allNeeds = GatherAllNeeds();
-            var sortedNeeds = allNeeds.OrderBy(n => n.SlackTimeMinutes).ToList();
-
-            // Diccionario para trazar la decisión tomada para cada tanque
-            var logicTrace = new Dictionary<string, (string Reason, string Mixer, string Color)>();
-
-            foreach (var need in sortedNeeds)
-            {
-                // 1. CÁLCULOS MATEMÁTICOS
-                double virtualLevel = need.Tank.CurrentLevel + need.Tank.MassScheduledToReceive;
-                double capacity = need.Tank.WorkingCapacity.GetValue(MassUnits.KiloGram);
-
-                // CORRECCIÓN 2: Evitar división por cero
-                double utilization = capacity > 0 ? (virtualLevel / capacity) * 100 : 0;
-
-                // --- CHECK 1: PIPELINE FULL? ---
-                if (utilization > 95)
-                {
-                    logicTrace[need.Tank.Name] = ($"Pipeline Full (Virt: {utilization:F0}%)", "--", "Success");
-                    continue;
-                }
-
-                // --- CHECK 2: ENTRADA FISICA OCUPADA? ---
-                if (need.Tank.InboundState is TankReceiving)
-                {
-                    logicTrace[need.Tank.Name] = ("Physical Inlet Busy", "--", "Warning");
-                    continue;
-                }
-
-                // --- CHECK 3: BUSCANDO NOVIO (MIXER) ---
-                var bestMixer = FindBestMixerFor(need);
-
-                if (bestMixer == null)
-                {
-                    logicTrace[need.Tank.Name] = ("No Compatible Mixer", "--", "Error");
-                    continue;
-                }
-
-                // --- CHECK 4: ASIGNACIÓN EXITOSA ---
-                if (need.IsInHouse) bestMixer.ReceivePriorityRequirementBatch(need.Tank);
-                else bestMixer.ReceiveRequirementBatch(need.Tank);
-
-                logicTrace[need.Tank.Name] = ("Assigned & Scheduled", bestMixer.Name, "Info");
-            }
-
-            // =================================================================
-            // PARTE C: CONSTRUIR LA LISTA FINAL (WIPs e InHouse)
-            // =================================================================
-            var demandList = new List<DemandLog>();
-
-            var allTanks = _context.Tanks.Values
-                    .OfType<ProcessTank>()
-                    .Where(t => t is WipTank || t is InHouseTank)
-                    .ToList();
-
-            foreach (var tank in allTanks)
-            {
-                string reason = "Stable / No Demand";
-                string mixer = "--";
-                string color = "Default";
-                double timeToEmpty = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
-
-                // Detectar si es VIP (InHouse) para pasarlo al log
-                bool isVip = tank is InHouseTank;
-
-                if (logicTrace.ContainsKey(tank.Name))
-                {
-                    var trace = logicTrace[tank.Name];
-                    reason = trace.Reason;
-                    mixer = trace.Mixer;
-                    color = trace.Color;
-                }
-                else if (tank.MassScheduledToReceive > 0)
-                {
-                    reason = "Incoming Load (Prev Cycle)";
-                    color = "Success";
-                }
-                else if (tank.CurrentLevel < 100)
-                {
-                    reason = "Idle / Not Configured";
-                }
-
-                demandList.Add(new DemandLog(
-                    tank.Name,
-                    tank.CurrentMaterial?.Name ?? "Empty",
-                    timeToEmpty,
-                    reason,
-                    mixer,
-                    color,
-                    isVip
-                ));
-            }
-
-            // =================================================================
-            // PARTE D: ORDENAMIENTO POR PRIORIDAD (Weighted Score)
-            // =================================================================
-            // CORRECCIÓN 3: Sistema de prioridades estricto
-            // 0: CRÍTICO (Rojo / Vacío)
-            // 1: WARNING (Naranja)
-            // 2: INFO (Azul - Asignado)
-            // 3: SEGURO (Verde - Pipeline Full) -> ¡Aquí bajan los verdes!
-            // 4: DEFAULT (Gris)
-
-            DemandSnapshot = demandList
-                .OrderBy(x =>
-                {
-                    // Regla de Oro: Si queda menos de 1 hora, es prioridad máxima (0)
-                    if (x.TimeToEmpty < 60) return 0;
-
-                    return x.StatusColor switch
-                    {
-                        "Error" => 0,    // No hay mixer compatible
-                        "Warning" => 1,  // Inlet Busy
-                        "Info" => 2,     // Acaba de ser asignado
-                        "Success" => 3,  // Pipeline Full / Incoming (BAJA PRIORIDAD VISUAL)
-                        _ => 4           // Default / Stable
-                    };
-                })
-                .ThenBy(x => x.TimeToEmpty) // Desempate: El más urgente arriba
-                .ToList();
-        }
-        public void Execute22(DateTime currentTime)
-        {
-            // =================================================================
-            // PARTE A: LOGICA DE OFERTA (Mixers) - ¿Qué están haciendo y para quién?
-            // =================================================================
-            var supplyList = new List<SupplyLog>();
-
-            var mixers = _context.Mixers.Values.Where(x => x.Materials.Any(x => x.IsFinishedProduct)).ToList();
-            foreach (var mixer in mixers)
-            {
-                double timeToFree = 0;
-                string targetTank = "--";
-                var queueNames = mixer.WipsQueue.Select(t => t.Name).ToList(); // Sacamos los nombres
-
-                if (mixer.InboundState is not MixerIdle)
-                {
-                    // Calculamos ETA
-                    double totalEst = 3600; // O _ai.GetEstimatedTime...
-                    double remaining = totalEst - mixer.NetBatchTimeInSeconds;
-                    timeToFree = remaining > 0 ? remaining / 60.0 : 0;
-
-                    // INTENTAMOS AVERIGUAR PARA QUIÉN ESTÁ TRABAJANDO
-                    // *NOTA*: Esto depende de tu modelo. Si el mixer no tiene propiedad 'TargetTank', 
-                    // asumimos que lo que está en su 'CurrentMaterial' va para alguien, 
-                    // pero si no tienes ese enlace explícito, ponemos "Batch in Progress".
-                    // Si tu objeto Mixer tiene 'CurrentRequirement', úsalo:
-                    // targetTank = mixer.CurrentRequirement?.Tank?.Name ?? "Unknown Dest.";
-
-                    // Si no tienes esa propiedad, revisa si puedes deducirlo. 
-                    // Por ahora pondré el producto, pero idealmente enlaza esto en tu Engine.
-                    targetTank = mixer.CurrentMaterial?.Name ?? "Processing...";
-                }
-
-                supplyList.Add(new SupplyLog(
-                    mixer.Name,
-                    mixer.InboundState?.StateName ?? "Off",
-                    mixer.CurrentMaterial?.Name ?? "--",
-                    targetTank,
-                    timeToFree,
-                    queueNames
-                ));
-            }
-            SupplySnapshot = supplyList.OrderBy(x => x.EtaMinutes).ToList();
-
-            // =================================================================
-            // PARTE B: LOGICA DE DEMANDA (Tanques) - El "Por Qué" de las decisiones
-            // =================================================================
-
-            var allNeeds = GatherAllNeeds();
-            var sortedNeeds = allNeeds.OrderBy(n => n.SlackTimeMinutes).ToList();
-
-            // Diccionario para guardar la "Razón Lógica" de cada tanque
-            var logicTrace = new Dictionary<string, (string Reason, string Mixer, string Color)>();
-
-            foreach (var need in sortedNeeds)
-            {
-                // 1. ESTADO ACTUAL
-                double virtualLevel = need.Tank.CurrentLevel + need.Tank.MassScheduledToReceive;
-                double capacity = need.Tank.WorkingCapacity.GetValue(MassUnits.KiloGram);
-                double virtualSpace = capacity - virtualLevel;
-                double utilization = (virtualLevel / capacity) * 100;
-
-                // --- CHECK 1: PIPELINE FULL? ---
-                // Si el tanque ya está virtualmente lleno (>95%), el Scheduler dice "STOP"
-                if (utilization > 95)
-                {
-                    logicTrace[need.Tank.Name] = ($"Pipeline Full (Virt: {utilization:F0}%)", "--", "Success");
-                    continue;
-                }
-
-                // --- CHECK 2: ENTRADA FISICA OCUPADA? ---
-                if (need.Tank.InboundState is TankReceiving)
-                {
-                    logicTrace[need.Tank.Name] = ("Physical Inlet Busy (Receiving)", "--", "Warning");
-                    continue;
-                }
-
-                // --- CHECK 3: BUSCANDO NOVIO (MIXER) ---
-                var bestMixer = FindBestMixerFor(need);
-
-                if (bestMixer == null)
-                {
-                    logicTrace[need.Tank.Name] = ("No Compatible Mixer Found", "--", "Error");
-                    continue;
-                }
-
-                // --- CHECK 4: ASIGNACIÓN EXITOSA ---
-                // Si llegamos aquí, ¡Asignamos!
-                if (need.IsInHouse) bestMixer.ReceivePriorityRequirementBatch(need.Tank);
-                else bestMixer.ReceiveRequirementBatch(need.Tank);
-
-                logicTrace[need.Tank.Name] = ("Assigned & Scheduled", bestMixer.Name, "Info");
-            }
-
-            // =================================================================
-            // PARTE C: CONSTRUIR LA LISTA FINAL (Uniendo todo)
-            // =================================================================
-            var demandList = new List<DemandLog>();
-
-            var allTanks = _context.Tanks.Values
-                    .OfType<ProcessTank>()
-                    .Where(t => t is WipTank || t is InHouseTank) // <--- FILTRO POR TIPO
-                    .ToList();
-            foreach (var tank in allTanks)
-            {
-                string reason = "Stable / No Demand";
-                string mixer = "--";
-                string color = "Default";
-                double timeToEmpty = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
-
-                // Si el tanque pasó por el "túnel de decisiones", recuperamos qué pasó
-                if (logicTrace.ContainsKey(tank.Name))
-                {
-                    var trace = logicTrace[tank.Name];
-                    reason = trace.Reason;
-                    mixer = trace.Mixer;
-                    color = trace.Color;
-                }
-                else if (tank.MassScheduledToReceive > 0)
-                {
-                    // Si no entró en la lógica de hoy pero tiene carga, es un remanente
-                    reason = "Incoming Load (Previous Cycle)";
-                    color = "Success";
-                }
-                else if (tank.CurrentLevel < 100) // Casi vacío y nadie lo miró
-                {
-                    // Si nadie lo miró y está vacío, es raro, quizás no tiene producto configurado
-                    reason = "Idle / Not Configured";
-                }
-
-                demandList.Add(new DemandLog(
-                    tank.Name,
-                    tank.CurrentMaterial?.Name ?? "Empty",
-                    timeToEmpty,
-                    reason,        // <--- AQUI MOSTRAMOS LA LÓGICA
-                    mixer,
-                    color,
-                    false // IsInHouse simplificado
-                ));
-            }
-
-            // Ordenar: Los problemas (Rojo/Error) primero
-            DemandSnapshot = demandList
-                .OrderBy(x => x.StatusColor == "Default") // Los estables al fondo
-                .ThenBy(x => x.StatusColor == "Success")  // Los atendidos después
-                .ThenBy(x => x.TimeToEmpty)         // Los urgentes arriba
-                .ToList();
-        }
-        //public void Execute2(DateTime currentTime)
-        //{
-        //    // ----------------------------------------------------------------------
-        //    // PASO 1: RECOPILAR NECESIDADES
-        //    // ----------------------------------------------------------------------
-        //    var allNeeds = GatherAllNeeds();
-        //    var sortedNeeds = allNeeds
-        //        .Where(n => n.IsUrgent)
-        //        .OrderBy(n => n.SlackTimeMinutes)
-        //        .ToList();
-
-        //    // Guardamos la foto cruda de necesidades (opcional, por si la usas en otro lado)
-        //    LastCalculationSnapshot = sortedNeeds;
-
-        //    // ----------------------------------------------------------------------
-        //    // PASO 2: ASIGNACIÓN DE LOTES (TU LÓGICA DE PIPELINE)
-        //    // ----------------------------------------------------------------------
-        //    // Diccionario temporal para guardar quién fue el "Mixer Elegido" en este ciclo
-        //    // Clave: TankName, Valor: MixerName
-        //    var decisionsInThisCycle = new Dictionary<string, string>();
-
-        //    foreach (var need in sortedNeeds)
-        //    {
-        //        // 1. Calculamos el "Nivel Virtual": Lo que tengo físico + Lo que ya me prometieron
-        //        double virtualLevel = need.Tank.CurrentLevel + need.Tank.MassScheduledToReceive;
-
-        //        // 2. Calculamos el "Espacio Virtual"
-        //        double virtualSpace = need.Tank.WorkingCapacity.GetValue(MassUnits.KiloGram) - virtualLevel;
-
-        //        // 3. Estimamos el tamaño del siguiente batch
-        //        var capableMixers = _context.Mixers.Values.Where(m => m.CanProcess(need.Product)).ToList();
-        //        double estimatedNextBatch = capableMixers.Any()
-        //            ? capableMixers.Max(m => m.GetCapacity(need.Product).GetValue(MassUnits.KiloGram))
-        //            : 2000;
-
-        //        // 4. EL FRENO DE MANO: Si no cabe otro batch completo (con factor de seguridad), pasamos.
-        //        if (virtualSpace < (estimatedNextBatch * 0.95))
-        //        {
-        //            decisionsInThisCycle[need.Tank.Name] = "Pipeline Full";
-        //            continue;
-        //        }
-
-        //        // 5. VALIDACIÓN DE ENTRADA FÍSICA
-        //        if (need.Tank.InboundState is TankReceiving || need.Tank.InboundState is TankInletStarvedHighLevel)
-        //        {
-        //            decisionsInThisCycle[need.Tank.Name] = "Receiving Now";
-        //            continue;
-        //        }
-
-        //        // 6. BUSCAR Y ASIGNAR MIXER
-        //        var bestMixer = FindBestMixerFor(need);
-
-        //        if (bestMixer != null)
-        //        {
-        //            if (need.IsInHouse)
-        //                bestMixer.ReceivePriorityRequirementBatch(need.Tank);
-        //            else
-        //                bestMixer.ReceiveRequirementBatch(need.Tank);
-
-        //            // Guardamos la decisión para mostrarla en la UI
-        //            decisionsInThisCycle[need.Tank.Name] = bestMixer.Name;
-        //        }
-        //        else
-        //        {
-        //            decisionsInThisCycle[need.Tank.Name] = "No Mixer";
-        //        }
-        //    }
-
-        //    // ----------------------------------------------------------------------
-        //    // PASO 3: GENERAR SNAPSHOT DE OFERTA (MIXERS) PARA LA UI
-        //    // ----------------------------------------------------------------------
-        //    var supplyList = new List<SupplyLog>();
-        //    foreach (var mixer in _context.Mixers.Values)
-        //    {
-        //        double timeToFree = 0;
-        //        if (mixer.InboundState is not MixerIdle && mixer.CurrentMaterial != null)
-        //        {
-        //            double totalEst = 3600; // Intenta usar _ai.GetEstimatedTime(...) si puedes
-        //            double remainingSec = totalEst - mixer.NetBatchTimeInSeconds;
-        //            timeToFree = remainingSec > 0 ? remainingSec / 60.0 : 0;
-        //        }
-
-        //        supplyList.Add(new SupplyLog(
-        //            mixer.Name,
-        //            mixer.InboundState?.StateName ?? "Unknown",
-        //            mixer.CurrentMaterial?.Name ?? "--",
-        //            timeToFree,
-        //            mixer.WipsQueue.Count
-        //        ));
-        //    }
-        //    SupplySnapshot = supplyList.OrderBy(x => x.TimeToFreeMinutes).ToList();
-
-        //    // ----------------------------------------------------------------------
-        //    // PASO 4: GENERAR SNAPSHOT DE DEMANDA (TANQUES) PARA LA UI
-        //    // ----------------------------------------------------------------------
-        //    // IMPORTANTE: Iteramos sobre TODOS los tanques de proceso, no solo 'sortedNeeds'
-        //    var demandList = new List<DemandLog>();
-        //    var allProcessTanks = _context.Tanks.Values
-        //            .OfType<ProcessTank>()
-        //            .Where(t => t is WipTank || t is InHouseTank) // <--- FILTRO POR TIPO
-        //            .ToList();
-        //    foreach (var tank in allProcessTanks)
-        //    {
-        //        // Buscamos si este tanque tenía una necesidad activa en este ciclo
-        //        var need = sortedNeeds.FirstOrDefault(n => n.Tank == tank);
-
-        //        // Datos básicos
-        //        string tankName = tank.Name;
-        //        string prodName = tank.CurrentMaterial?.Name ?? (need?.Product.Name ?? "Empty");
-        //        double currentLevel = tank.CurrentLevel;
-        //        double timeToEmpty = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
-
-        //        // Datos de decisión
-        //        double slack = need != null ? need.SlackTimeMinutes : 9999;
-        //        bool isInHouse = need?.IsInHouse ?? false;
-
-        //        // Estado y Target Mixer
-        //        string status = "Stable";
-        //        string targetMixer = "--";
-
-        //        // Intentamos recuperar qué decisión se tomó arriba
-        //        if (decisionsInThisCycle.ContainsKey(tankName))
-        //        {
-        //            targetMixer = decisionsInThisCycle[tankName]; // Puede ser "Mixer A", "Pipeline Full", etc.
-        //        }
-        //        else if (need != null)
-        //        {
-        //            // Si estaba en needs pero no entró al diccionario, asumimos Waiting
-        //            var best = FindBestMixerFor(need);
-        //            targetMixer = best?.Name ?? "None";
-        //        }
-
-        //        // Definimos el Status visual
-        //        if (tank.MassScheduledToReceive > 0)
-        //        {
-        //            status = "In Pipeline";
-        //            if (targetMixer == "--") targetMixer = "Incoming...";
-        //        }
-        //        else if (slack < 0)
-        //        {
-        //            status = "Late Start";
-        //        }
-        //        else if (need != null)
-        //        {
-        //            status = "Needs Product";
-        //        }
-        //        else if (currentLevel >= tank.WorkingCapacity.GetValue(MassUnits.KiloGram) * 0.95)
-        //        {
-        //            status = "Full";
-        //        }
-
-        //        demandList.Add(new DemandLog(
-        //            tankName,
-        //            prodName,
-        //            currentLevel,
-        //            timeToEmpty,
-        //            slack,
-        //            targetMixer,
-        //            status,
-        //            isInHouse
-        //        ));
-        //    }
-
-        //    // Ordenamos para la vista: Urgentes primero
-        //    DemandSnapshot = demandList
-        //        .OrderBy(x => x.SlackMinutes)
-        //        .ThenBy(x => x.TimeToEmptyMinutes)
-        //        .ToList();
-        //}
-        //public void Execute3(DateTime currentTime)
-        //{
-        //    var allNeeds = GatherAllNeeds();
-        //    var sortedNeeds = allNeeds
-        //        .Where(n => n.IsUrgent)
-        //        .OrderBy(n => n.SlackTimeMinutes)
-        //        .ToList();
-        //    LastCalculationSnapshot = sortedNeeds;
-        //    var supplyList = new List<SupplyLog>();
-        //    foreach (var mixer in _context.Mixers.Values)
-        //    {
-        //        // Calculamos cuándo se libera este mixer
-        //        double timeToFree = 0;
-        //        if (mixer.InboundState is not MixerIdle && mixer.CurrentMaterial != null)
-        //        {
-        //            // Tiempo Total Estimado - Tiempo Transcurrido
-        //            // (Asegúrate de tener acceso al estimado, o usa un promedio)
-        //            double totalEst = 3600; // O _ai.GetEstimatedTime(...)
-        //            double remainingSec = totalEst - mixer.NetBatchTimeInSeconds;
-        //            timeToFree = remainingSec > 0 ? remainingSec / 60.0 : 0;
-        //        }
-
-        //        supplyList.Add(new SupplyLog(
-        //            mixer.Name,
-        //            mixer.InboundState?.StateName ?? "Unknown",
-        //            mixer.CurrentMaterial?.Name ?? "--",
-        //            timeToFree,
-        //            mixer.WipsQueue.Count
-        //        ));
-        //    }
-        //    // Ordenamos: Los que se liberan primero van arriba
-        //    SupplySnapshot = supplyList.OrderBy(x => x.MixerName).ToList();
-        //    var demandList = new List<DemandLog>();
-        //    foreach (var need in sortedNeeds)
-        //    {
-        //        // ----------------------------------------------------------------------
-        //        // CORRECCIÓN: LOGICA DE PIPELINE (LLENADO MÚLTIPLE)
-        //        // ----------------------------------------------------------------------
-
-        //        // 1. Calculamos el "Nivel Virtual": Lo que tengo físico + Lo que ya me prometieron
-        //        double virtualLevel = need.Tank.CurrentLevel + need.Tank.MassScheduledToReceive;
-
-        //        // 2. Calculamos el "Espacio Virtual": El hueco que quedaría si todo lo prometido llegara YA
-        //        double virtualSpace = need.Tank.WorkingCapacity.GetValue(MassUnits.KiloGram) - virtualLevel;
-
-        //        // 3. Estimamos el tamaño del siguiente batch (Max Mixer Capacity para seguridad)
-        //        var capableMixers = _context.Mixers.Values.Where(m => m.CanProcess(need.Product)).ToList();
-        //        double estimatedNextBatch = capableMixers.Any()
-        //            ? capableMixers.Max(m => m.GetCapacity(need.Product).GetValue(MassUnits.KiloGram))
-        //            : 2000;
-
-        //        // 4. EL NUEVO FRENO:
-        //        // Solo dejamos de pedir si NO cabe otro batch completo encima de lo que ya viene.
-        //        // Usamos un factor de seguridad (0.95) para no llenar hasta el borde matemático.
-        //        if (virtualSpace < (estimatedNextBatch * 0.95))
-        //        {
-        //            continue; // Ya está lleno el pipeline, no cabe ni uno más.
-        //        }
-
-        //        // ----------------------------------------------------------------------
-        //        // VALIDACIÓN DE ENTRADA FÍSICA (Para no chocar trenes)
-        //        // ----------------------------------------------------------------------
-        //        // Aunque queramos pedir más, si el tanque está FÍSICAMENTE recibiendo producto AHORA MISMO,
-        //        // esperamos a que termine esa transferencia para no bloquear bombas/válvulas.
-        //        // NOTA: Esto depende de si tu tanque tiene 1 o varias entradas. Si tiene 1, descomenta esto:
-
-        //        if (need.Tank.InboundState is TankReceiving || need.Tank.InboundState is TankInletStarvedHighLevel)
-        //        {
-        //            continue;
-        //        }
-
-
-        //        // --- SI PASAMOS AQUÍ, PODEMOS ENCOLAR OTRO BATCH ---
-
-        //        var bestMixer = FindBestMixerFor(need);
-
-        //        if (bestMixer != null)
-        //        {
-        //            if (need.IsInHouse)
-        //                bestMixer.ReceivePriorityRequirementBatch(need.Tank);
-        //            else
-        //                bestMixer.ReceiveRequirementBatch(need.Tank);
-
-        //            // IMPORTANTE: Al asignarlo, el BatchMixer internamente DEBE sumar 
-        //            // a need.Tank.MassScheduledToReceive inmediatamente, 
-        //            // para que en la siguiente vuelta del loop, 'virtualLevel' suba y frene si es necesario.
-        //        }
-        //        string status = "Waiting";
-        //        if (need.Tank.MassScheduledToReceive > 0) status = "In Pipeline";
-        //        else if (need.SlackTimeMinutes < 0) status = "Late Start";
-        //        demandList.Add(new DemandLog(
-        //            need.Tank.Name,
-        //            need.Product.Name,
-        //            need.Tank.CurrentLevel,
-        //            need.Tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute),
-        //            need.SlackTimeMinutes,
-        //            bestMixer?.Name ?? "None", // Quién lo va a salvar
-        //            status,
-        //            need.IsInHouse
-        //        ));
-        //        DemandSnapshot = demandList
-        //  .OrderBy(x => x.SlackMinutes)
-        //  .ThenBy(x => x.TimeToEmptyMinutes)
-        //  .ToList();
-        //    }
-        //}
-
-
-        // --- CLASE AUXILIAR PARA GUARDAR DATOS DEL ANÁLISIS ---
 
 
         // --- FASE 1: RECOLECCIÓN ---
@@ -819,8 +208,9 @@ namespace GeminiSimulator.Main
         {
             var needs = new List<Need>();
 
+            var lines = _context.Lines.Values.Where(x => x.CurrentOrder != null && x.CurrentWipTank != null).ToList();
             // A. Analizar WIPs de Líneas (Consumo normal)
-            foreach (var line in _context.Lines.Values)
+            foreach (var line in lines)
             {
                 if (line.CurrentWipTank == null || line.CurrentOrder == null) continue;
 
@@ -851,24 +241,31 @@ namespace GeminiSimulator.Main
             // CORRECCIÓN: ESTIMAR EL TAMAÑO REAL DEL LOTE (EL "BALDE")
             // -------------------------------------------------------------
 
+            double timeToEmptyMin = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
+            if (timeToEmptyMin == 0) { return null; }//No hay datos que analizar aun no ha corrido la linea asignara basura
+            var bestMixer = FindBestMixerFor(product, isInHouse);
             // 1. Buscamos qué mixers pueden hacer este producto para saber el tamaño típico del lote.
-            var capableMixers = _context.Mixers.Values.Where(m => m.CanProcess(product)).ToList();
+
+            if (bestMixer == null) return null;
 
             // Si no hay mixers, asumimos algo seguro (ej. 2000kg) o la capacidad del tanque si es pequeño.
             // Esto evita división por cero.
-            double estimatedBatchSize = capableMixers.Any()
-      ? capableMixers.Max(m => m.GetCapacity(product).GetValue(MassUnits.KiloGram)) // <--- CAMBIO AQUI
-      : 2000;
+            Amount Mixercapacity = bestMixer.GetCapacity(product);
 
+            double estimatedBatchSize = Mixercapacity.GetValue(MassUnits.KiloGram);
             // -------------------------------------------------------------
             // CASO 1: VALIDACIÓN DE ESPACIO FUTURO (Predictivo)
             // -------------------------------------------------------------
 
-            double currentLevel = tank.CurrentLevel;
+            double currentLevel = tank.TotalMassInProcess;
             double currentSpace = tank.WorkingCapacity.GetValue(MassUnits.KiloGram) - currentLevel;
 
             // 2. ¿Cuánto tardará el mixer en llegar?
-            double estimatedBatchTimeSec = _ai.GetMaxProductTime(product);
+            double batchtimme = _ai.PredictBatchDuration(bestMixer, product);
+            double dischargeTime = bestMixer.DischargeRate == 0 ? 10000000 : estimatedBatchSize / bestMixer.DischargeRate;
+            double estimatedBatchTimeSec = batchtimme + dischargeTime;
+
+
 
             // 3. ¿Cuánto va a consumir la línea mientras cocinamos? (Proyección)
             double consumptionPerSec = tank.AverageOutleFlow.GetValue(MassFlowUnits.Kg_sg);
@@ -885,53 +282,53 @@ namespace GeminiSimulator.Main
                 return null; // Aún no cabe un lote completo. Esperar.
             }
 
-            // -------------------------------------------------------------
-            // CÁLCULO DE URGENCIA (Igual que antes)
-            // -------------------------------------------------------------
 
-            double timeToEmptyMin = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
-            if (timeToEmptyMin == 0 && currentLevel > 100) timeToEmptyMin = 9999;
+
+
 
             double estimatedBatchTimeMin = estimatedBatchTimeSec / 60.0;
             double slack = timeToEmptyMin - estimatedBatchTimeMin;
-            double triggerThreshold = isInHouse ? 120 : 60;
 
-            bool isUrgent = slack <= triggerThreshold;
 
-            // Filtro final anti-rebose
-            if (tank.CurrentLevel >= tank.WorkingCapacity.GetValue(MassUnits.KiloGram) * 0.98) isUrgent = false;
+
+            bool isUrgent = isInHouse ? true : slack <= 0;
+            if (!isUrgent) return null;
 
             return new Need(tank, product, slack, isInHouse, isUrgent);
         }
 
-        // --- FASE 3: SELECCIÓN DEL MEJOR MIXER (CALCULADORA DE TIEMPO) ---
-        private BatchMixer? FindBestMixerFor(Need need)
+
+        private BatchMixer? FindBestMixerFor(ProductDefinition _product, bool _isInHouse)
         {
             // 1. Filtrar: Solo mixers que físicamente puedan hacer el producto
             var candidates = _context.Mixers.Values
-                .Where(m => m.CanProcess(need.Product))
+                .Where(m => m.CanProcess(_product))
                 .ToList();
 
             if (!candidates.Any()) return null;
 
-            // 2. Calcular ETA (Estimated Time of Arrival) para cada uno
-            var scoredCandidates = candidates.Select(mixer => new
-            {
-                Mixer = mixer,
-                // Calculamos cuándo estará libre este mixer para MÍ
-                MinutesToWait = CalculateEstimatedAvailability(mixer, need.Product, need.IsInHouse)
-            });
+            List<(BatchMixer Mixer, double BestProductivity)> scoredCandidates = new();
 
+            foreach (var candidate in candidates)
+            {
+                var productivity = CalculateEstimatedAvailability(candidate, _product, _isInHouse);
+                scoredCandidates.Add((candidate, productivity));
+            }
+
+
+
+            var BestCandidate = scoredCandidates.MaxBy(x => x.BestProductivity);
+
+            var selectedmixer = BestCandidate.Mixer;
             // 3. Ganador: El que tenga menor tiempo de espera
-            return scoredCandidates
-                .OrderBy(x => x.MinutesToWait)
-                .First().Mixer;
+            return selectedmixer;
         }
 
         // --- EL CÁLCULO COMPLEJO DE DISPONIBILIDAD (TU LÓGICA DE ORO) ---
         private double CalculateEstimatedAvailability(BatchMixer mixer, ProductDefinition productToMake, bool isPriority)
         {
-            double timelineSeconds = 0;
+            double timelineSeconds = 1;
+            double BatchSizeKg = mixer.GetCapacity(productToMake).GetValue(MassUnits.KiloGram);
 
             // Rastreamos qué producto deja sucio al mixer en cada paso mental
             ProductDefinition? currentContextProduct = mixer.CurrentMaterial ?? mixer.LastMaterialProcessed;
@@ -987,9 +384,9 @@ namespace GeminiSimulator.Main
 
                     // 2. Batch (Receta)
                     timelineSeconds += _ai.GetMaxProductTime(nextProduct);
-
+                    var capacity = mixer.GetCapacity(nextProduct).GetValue(MassUnits.KiloGram);
                     // 3. Descarga (Transferencia)
-                    double dischargeTime = queuedTank.MassScheduledToReceive / (mixer.DischargeRate > 0 ? mixer.DischargeRate : 1);
+                    double dischargeTime = capacity / (mixer.DischargeRate > 0 ? mixer.DischargeRate : 1);
                     timelineSeconds += dischargeTime;
 
                     // Actualizamos el contexto: el mixer queda sucio con ESTE producto
@@ -1021,8 +418,8 @@ namespace GeminiSimulator.Main
                     }
                 }
             }
-
-            return timelineSeconds / 60.0; // Devolvemos Minutos
+            var result = BatchSizeKg / (timelineSeconds / 60.0);
+            return result; // Devolvemos Minutos
         }
     }
 }

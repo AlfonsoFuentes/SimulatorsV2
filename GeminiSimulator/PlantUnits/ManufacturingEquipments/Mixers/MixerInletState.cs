@@ -31,7 +31,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
     public class MixerIdle : MixerInletState
     {
         public MixerIdle(BatchMixer m) : base(m) { }
-        public override string StateName => $" Mixer {_mixer.Name} Available";
+        public override string StateName => $"{_mixer.Name} Available";
         // Espera pasiva a ReceiveRequirementFromWIP
     }
     public class MixerStarvedByAtInitOperator : MixerInletState
