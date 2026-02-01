@@ -1,9 +1,4 @@
-﻿using Simulator.Shared.Models.HCs.LinePlanneds;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.SKULines;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
-
-namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
+﻿namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 {
     public class ProcessLineFactory
     {

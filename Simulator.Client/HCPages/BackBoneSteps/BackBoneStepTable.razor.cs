@@ -1,5 +1,5 @@
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.Materials;
+using QWENShared.DTOS.BackBoneSteps;
+using QWENShared.DTOS.Materials;
 
 namespace Simulator.Client.HCPages.BackBoneSteps;
 public partial class BackBoneStepTable

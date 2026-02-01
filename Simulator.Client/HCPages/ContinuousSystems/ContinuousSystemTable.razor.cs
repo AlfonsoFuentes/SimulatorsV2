@@ -1,8 +1,5 @@
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.ContinuousSystems;
-
-
-
+using QWENShared.DTOS.ContinuousSystems;
+using QWENShared.Enums;
 
 namespace Simulator.Client.HCPages.ContinuousSystems;
 public partial class ContinuousSystemTable

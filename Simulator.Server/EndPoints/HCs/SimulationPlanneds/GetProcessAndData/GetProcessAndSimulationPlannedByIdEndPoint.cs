@@ -1,12 +1,12 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Models.HCs.ContinuousSystems;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.Mixers;
-using Simulator.Shared.Models.HCs.Operators;
-using Simulator.Shared.Models.HCs.Pumps;
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
-using Simulator.Shared.Models.HCs.StreamJoiners;
-using Simulator.Shared.Models.HCs.Tanks;
+﻿using QWENShared.DTOS.ContinuousSystems;
+using QWENShared.DTOS.Lines;
+using QWENShared.DTOS.Mixers;
+using QWENShared.DTOS.Operators;
+using QWENShared.DTOS.Pumps;
+using QWENShared.DTOS.SimulationPlanneds;
+using QWENShared.DTOS.StreamJoiners;
+using QWENShared.DTOS.Tanks;
+using Simulator.Server.Databases.Entities.HC;
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

@@ -8,12 +8,12 @@
                 <IconButton Size=@Size.Small ToolTip="Add new Proces" Icon="@Icons.Material.Filled.Add" Variant=Variant.Outlined OnClick="AddNew"></IconButton>
                 @if (!Showplanned)
                 {
-                    <Button ToolTip="Processes" OnClick="@(() => ShowProcess = !ShowProcess)" Text="Show Process"></Button>
+                    <Button ToolTip="Processes" OnClick="@(() => ShowProcess = !ShowProcess)" Text="Process"></Button>
                 }
 
                 @if (!Showplanned)
                 {
-                    <Button ToolTip="Planned" OnClick="@(() => Showplanned = !Showplanned)" Text="Show PLanned"></Button>
+                    <Button ToolTip="Planned" OnClick="@(() => Showplanned = !Showplanned)" Text="Planned"></Button>
                 }
             </MudStack>
            
@@ -57,7 +57,7 @@
         }
         else if (Simulation != null)
         {
-            <SelectedProcessTabs FocusFactory=@FocusFactory Simulation="@Simulation" GetAll="SelectAllProcess" MainProcessId="@MainProcessId"></SelectedProcessTabs>
+            <SelectedProcessTabs FocusFactory=@FocusFactory Engine="@_engine" Simulation="@Simulation" GetAll="SelectAllProcess" MainProcessId="@MainProcessId"></SelectedProcessTabs>
         }
 
 

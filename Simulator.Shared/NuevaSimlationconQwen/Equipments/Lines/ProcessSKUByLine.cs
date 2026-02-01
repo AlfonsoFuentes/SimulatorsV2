@@ -1,10 +1,4 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
-using Simulator.Shared.NuevaSimlationconQwen.Reports;
-using System;
-using static Simulator.Shared.StaticClasses.StaticClass;
-
-namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
+﻿namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 {
     public class ProcessSKUByLine
     {
@@ -55,6 +49,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
         private Amount Case_Shift => _plannedSKU?.Case_Shift ?? new Amount(0, CaseUnits.Case);
         private Amount EA_Case => _plannedSKU?.EA_Case ?? new Amount(0, EAUnits.EA);
         public Amount LineSpeed => _plannedSKU?.LineSpeed ?? new Amount(0, LineVelocityUnits.EA_min);
+       
         public Amount Weigth_EA => _plannedSKU?.Weigth_EA ?? new Amount(0, MassUnits.KiloGram);
         public double PlannedAU => _plannedSKU?.PlannedAU ?? 0;
         public Amount TotalPlannedEA => _plannedSKU?.TotalPlannedEA ?? new Amount(0, EAUnits.EA);

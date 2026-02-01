@@ -1,5 +1,5 @@
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Pumps;
+using QWENShared.DTOS.Pumps;
+using QWENShared.Enums;
 
 namespace Simulator.Client.HCPages.Pumps;
 public partial class PumpTable

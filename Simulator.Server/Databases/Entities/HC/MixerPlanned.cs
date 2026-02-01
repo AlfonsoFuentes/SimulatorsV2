@@ -1,12 +1,10 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
+﻿using QWENShared.DTOS.BackBoneSteps;
+using QWENShared.DTOS.BaseEquipments;
+using QWENShared.DTOS.Materials;
+using QWENShared.DTOS.MixerPlanneds;
+using QWENShared.DTOS.Mixers;
+using QWENShared.Enums;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.MixerPlanneds;
-using Simulator.Shared.Models.HCs.Mixers;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

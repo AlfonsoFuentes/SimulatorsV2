@@ -1,5 +1,5 @@
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Lines;
+using QWENShared.DTOS.Lines;
+using QWENShared.Enums;
 
 namespace Simulator.Client.HCPages.Lines;
 public partial class LineTable

@@ -1,7 +1,6 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.LinePlanneds;
-using Web.Infrastructure.Managers.Generic;
+﻿using QWENShared.DTOS.LinePlanneds;
+using QWENShared.Enums;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 
 namespace Web.Infrastructure.Validators.FinishinLines.LinePlanneds
 {

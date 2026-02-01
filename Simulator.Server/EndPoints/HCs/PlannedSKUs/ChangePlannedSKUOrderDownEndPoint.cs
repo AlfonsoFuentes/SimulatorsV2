@@ -1,7 +1,4 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Models.HCs.PlannedSKUs;
-
-namespace Simulator.Server.EndPoints.HCs.PlannedSKUs
+﻿namespace Simulator.Server.EndPoints.HCs.PlannedSKUs
 {
     //public static class ChangePlannedSKUOrderDownEndPoint
     //{

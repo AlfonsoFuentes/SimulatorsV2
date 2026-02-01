@@ -1,5 +1,5 @@
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.StreamJoiners;
+using QWENShared.DTOS.StreamJoiners;
+using QWENShared.Enums;
 
 namespace Simulator.Client.HCPages.StreamJoiners;
 public partial class StreamJoinerTable

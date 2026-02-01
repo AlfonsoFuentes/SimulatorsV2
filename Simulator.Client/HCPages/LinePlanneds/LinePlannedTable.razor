@@ -1,4 +1,5 @@
-﻿@using Simulator.Shared.Models.HCs.LinePlanneds
+﻿@using QWENShared.DTOS.LinePlanneds
+
 
 
 
@@ -15,7 +16,7 @@
         <PropertyColumn Property="x => x.LineName" Title="Line" TProperty="string" T="LinePlannedDTO" />
         <PropertyColumn Property="x => x.ShiftType.ToString()" Title="Shift Scheduled" TProperty="string" T="LinePlannedDTO" />
         <PropertyColumn Property="x => x.PackageType.ToString()" Title="Package" TProperty="string" T="LinePlannedDTO" />
-        <PropertyColumn Property="x => x.WIPLevel.ToString()" Title="Wip level" TProperty="string" T="LinePlannedDTO" />
+     
        
         <TemplateColumn CellClass="d-flex justify-end" T="LinePlannedDTO">
            

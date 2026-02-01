@@ -1,9 +1,6 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
+﻿using QWENShared.DTOS.SimulationPlanneds;
 using Simulator.Server.Databases.Contracts;
 using Simulator.Server.ExtensionsMethods.Validations;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

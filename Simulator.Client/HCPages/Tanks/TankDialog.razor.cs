@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.Tanks;
+using QWENShared.DTOS.Tanks;
 
 namespace Simulator.Client.HCPages.Tanks;
 public partial class TankDialog

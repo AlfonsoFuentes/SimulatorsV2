@@ -6,3 +6,4 @@ global using Simulator.Shared.Commons;
 global using Simulator.Shared.StaticClasses;
 global using System.Linq.Expressions;
 global using UnitSystem;
+global using QWENShared.DTOS.Base;

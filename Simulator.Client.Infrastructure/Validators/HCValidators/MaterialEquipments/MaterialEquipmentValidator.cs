@@ -1,7 +1,6 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.MaterialEquipments;
-using Simulator.Shared.Models.HCs.Materials;
-using Web.Infrastructure.Managers.Generic;
+﻿using QWENShared.DTOS.MaterialEquipments;
+using QWENShared.DTOS.Materials;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 
 namespace Web.Infrastructure.Validators.FinishinLines.MaterialEquipments
 {

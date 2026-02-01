@@ -1,9 +1,4 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Server.EndPoints.HCs.ProccesEquipments;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.Conectors;
-
-namespace Simulator.Server.EndPoints.HCs.Conectors
+﻿namespace Simulator.Server.EndPoints.HCs.Conectors
 {
     //public static class CreateInletConnectors
     //{

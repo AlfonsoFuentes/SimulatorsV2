@@ -1,9 +1,6 @@
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.PlannedSKUs;
-using Simulator.Shared.Models.HCs.SKULines;
-using Simulator.Shared.Models.HCs.SKUs;
-using System.Linq;
-using static MudBlazor.CategoryTypes;
+using QWENShared.DTOS.PlannedSKUs;
+using QWENShared.DTOS.SKULines;
+using QWENShared.DTOS.SKUs;
 
 namespace Simulator.Client.HCPages.PlannedSKUs;
 public partial class PlannedSKUDialog

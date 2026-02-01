@@ -1,12 +1,12 @@
-﻿using Simulator.Server.Databases.Entities.HC;
+﻿using QWENShared.DTOS.LinePlanneds;
+using QWENShared.DTOS.MixerPlanneds;
+using QWENShared.DTOS.PlannedSKUs;
+using QWENShared.DTOS.SimulationPlanneds;
+using Simulator.Server.Databases.Entities.HC;
 using Simulator.Server.EndPoints.HCs.EquipmentPlannedDownTimes;
 using Simulator.Server.EndPoints.HCs.MixerPlanneds;
 using Simulator.Server.EndPoints.HCs.PlannedSKUs;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.LinePlanneds;
-using Simulator.Shared.Models.HCs.MixerPlanneds;
-using Simulator.Shared.Models.HCs.PlannedSKUs;
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
+
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {
     public static class ReadSimulationPlannedss

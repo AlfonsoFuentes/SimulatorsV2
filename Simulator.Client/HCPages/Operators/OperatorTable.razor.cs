@@ -1,5 +1,5 @@
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Operators;
+using QWENShared.DTOS.Operators;
+using QWENShared.Enums;
 
 namespace Simulator.Client.HCPages.Operators;
 public partial class OperatorTable

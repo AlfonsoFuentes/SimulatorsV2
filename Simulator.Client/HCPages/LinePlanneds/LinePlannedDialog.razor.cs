@@ -1,10 +1,7 @@
-using Simulator.Shared.Models.HCs.LinePlanneds;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.PlannedSKUs;
-using Simulator.Shared.Models.HCs.PreferedMixers;
-using Simulator.Shared.Models.HCs.SKULines;
-using static MudBlazor.CategoryTypes;
-using static Simulator.Shared.StaticClasses.StaticClass;
+using QWENShared.DTOS.LinePlanneds;
+using QWENShared.DTOS.Lines;
+using QWENShared.DTOS.PlannedSKUs;
+using QWENShared.DTOS.PreferedMixers;
 
 namespace Simulator.Client.HCPages.LinePlanneds;
 public partial class LinePlannedDialog
@@ -48,7 +45,7 @@ public partial class LinePlannedDialog
     {
         if (Model.Id != Guid.Empty)
         {
-            var result = await ClientService.GetAll( new  PlannedSKUDTO()
+            var result = await ClientService.GetAll( new PlannedSKUDTO()
             {
                 LinePlannedId = Model.Id,
 

@@ -1,11 +1,7 @@
-﻿using Simulator.Client.HCPages.Materials;
+﻿using QWENShared.DTOS.SKULines;
+using QWENShared.DTOS.SKUs;
+using QWENShared.Enums;
 using Simulator.Client.HCPages.SKUs;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.SKULines;
-using Simulator.Shared.Models.HCs.SKUs;
-using System.Linq;
-using static MudBlazor.CategoryTypes;
 
 namespace Simulator.Client.HCPages.SKULines
 {

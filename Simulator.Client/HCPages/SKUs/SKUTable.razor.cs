@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.SKUs;
+using QWENShared.DTOS.SKUs;
 
 namespace Simulator.Client.HCPages.SKUs;
 public partial class SKUTable

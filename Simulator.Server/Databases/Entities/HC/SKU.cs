@@ -1,15 +1,11 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using QWENShared.DTOS.Base;
+using QWENShared.DTOS.Materials;
+using QWENShared.DTOS.SKUs;
+using QWENShared.Enums;
 using Simulator.Server.Databases.Contracts;
 using Simulator.Server.ExtensionsMethods.Validations;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.SKUs;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Security.AccessControl;
-using static Simulator.Shared.StaticClasses.StaticClass;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

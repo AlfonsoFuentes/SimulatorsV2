@@ -1,6 +1,7 @@
+using QWENShared.DTOS.Materials;
+using QWENShared.DTOS.SKUs;
+using QWENShared.Enums;
 using Simulator.Client.HCPages.Materials;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.SKUs;
 
 namespace Simulator.Client.HCPages.SKUs;
 public partial class SKUDialog
@@ -70,7 +71,7 @@ public partial class SKUDialog
     {
         MaterialDTO Model = new MaterialDTO()
         {
-            MaterialType = Shared.Enums.HCEnums.Enums.MaterialType.ProductBackBone,
+            MaterialType = MaterialType.ProductBackBone,
 
         };
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.3.11408.92 d18.3
+VisualStudioVersion = 18.3.11408.92
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulator.Shared", "Simulator.Shared\Simulator.Shared.csproj", "{F6ABC5E8-9D7C-4DAC-A279-3FFB31FD04AE}"
 EndProject
@@ -12,6 +12,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulator.Client.Infrastructure", "Simulator.Client.Infrastructure\Simulator.Client.Infrastructure.csproj", "{4178A0D9-655E-4857-BBAB-51365EBDA870}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitSystem", "UnitSystem\UnitSystem.csproj", "{848E5F23-A229-40E8-81BC-EC7109E5F0BC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QWENShared", "QWENShared\QWENShared.csproj", "{9BADE2F7-9C82-4F21-84A6-4D697C69AC3C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeminiSimulator", "GeminiSimulator\GeminiSimulator.csproj", "{AED05C82-6477-48E2-9D06-103072CBAD9B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +43,14 @@ Global
 		{848E5F23-A229-40E8-81BC-EC7109E5F0BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{848E5F23-A229-40E8-81BC-EC7109E5F0BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{848E5F23-A229-40E8-81BC-EC7109E5F0BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BADE2F7-9C82-4F21-84A6-4D697C69AC3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BADE2F7-9C82-4F21-84A6-4D697C69AC3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BADE2F7-9C82-4F21-84A6-4D697C69AC3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BADE2F7-9C82-4F21-84A6-4D697C69AC3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AED05C82-6477-48E2-9D06-103072CBAD9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AED05C82-6477-48E2-9D06-103072CBAD9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AED05C82-6477-48E2-9D06-103072CBAD9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AED05C82-6477-48E2-9D06-103072CBAD9B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

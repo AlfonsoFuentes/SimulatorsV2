@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
+using QWENShared.DTOS.SimulationPlanneds;
 
 namespace Simulator.Client.HCPages.MainProcesses.Plans;
 public partial class SimulationPlannedDialog

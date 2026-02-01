@@ -1,11 +1,5 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
-using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
+﻿using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
 using Simulator.Shared.NuevaSimlationconQwen.States.BaseClass;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
 {
@@ -170,7 +164,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
 
         public override void Run(DateTime currentdate)
         {
-            Context.CurrentBatchReport?.RecordTime(MixerTimeType.Batching);
+     
             CalculateMassStep();
             StateLabel = $"{Context.CurrentManufactureOrder.CurrentStep.StepNumber} of " +
                          $"{Context.CurrentManufactureOrder.TotalSteps} - " +

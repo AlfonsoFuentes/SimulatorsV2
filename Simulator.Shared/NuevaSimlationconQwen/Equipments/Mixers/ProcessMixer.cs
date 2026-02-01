@@ -1,9 +1,10 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.BaseClases.Material;
+using QWENShared.Enums;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
 using Simulator.Shared.NuevaSimlationconQwen.Reports;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
@@ -21,7 +22,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
 
         public List<ProcessPump> OutletPumps => OutletEquipments.OfType<ProcessPump>().ToList();
         public ProcessPump? OutletPump => OutletPumps.FirstOrDefault();
-
+        public bool IsMixerFree => CurrentManufactureOrder == null && ManufacturingOrders.Count == 0;
         public virtual void SetMaterialsAtOutlet(IMaterial material)
         {
             foreach (var outlet in OutletPumps)
@@ -41,10 +42,24 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
         {
             CurrentBatchReport = new(this);
             MixerManufactureOrder newOrderMixer = new MixerManufactureOrder(this, order, CurrentBatchReport);
+            var op = InletOperators.FirstOrDefault();
+            if (op != null)
+            {
+                // Calculamos la duración manual proyectada (Lavado + Preparación)
+                // Usamos la receta vinculada al material de la orden
+                var recipe = EquipmentMaterials.FirstOrDefault(m => m.Material.Id == order.Material.Id);
+                if (recipe != null)
+                {
 
+                    Amount manualDuration = GetWashoutTime(LastMaterial, recipe.Material) + recipe.BatchCycleTime;
+
+                    // Añadimos la reserva a la agenda del operario inmediatamente
+                    op.Agenda.Add(new OperatorWorkTask(this.Id, newOrderMixer.Id, manualDuration));
+                }
+            }
             CurrentBatchReport.DateReceivedToInitBatch = this.CurrentDate;
             CurrentBatchReport.BatchSize = newOrderMixer.BatchSize;
-            CurrentBatchReport.TheroticalBatchTime = newOrderMixer.BatchTime;
+            CurrentBatchReport.BatchCycleTime = newOrderMixer.BatchCycleTime;
 
 
             BatchReports.Add(CurrentBatchReport);
@@ -52,7 +67,25 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
             order.AddMixerManufactureOrder(newOrderMixer);
 
         }
+        Amount GetWashoutTime(IMaterial? materialCurrent, IMaterial materialNext)
+        {
 
+
+            Amount washoutTime = new Amount(0, TimeUnits.Minute);
+            if (materialCurrent != null)
+            {
+
+                var washoutDef = WashoutTimes
+                                .FirstOrDefault(x => x.ProductCategoryCurrent == materialCurrent.ProductCategory &&
+                                                   x.ProductCategoryNext == materialNext.ProductCategory);
+
+                if (washoutDef != null)
+                {
+                    washoutTime = washoutDef.MixerWashoutTime;
+                }
+            }
+            return washoutTime;
+        }
         public void InitBatchDate()
         {
             CurrentBatchReport?.InitRealBatchDate(this.CurrentDate);
@@ -279,6 +312,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
         {
             if (CapturedOperator != null)
             {
+
                 var op = CapturedOperator;
                 op.OcuppiedBy = null!;
                 op.OutletState = new FeederAvailableState(op);
@@ -287,70 +321,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
             }
         }
 
-        //public bool IsCurrentStepFeederAvailable()
-        //{
-        //    if (CurrentManufactureOrder == null || CurrentManufactureOrder.CurrentStep == null || !CurrentManufactureOrder.CurrentStep.RawMaterialId.HasValue) return false;
-        //    var IsOperator = IsMaterialFeederOperator(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
-        //    var newFeeder = IsMaterialFeederAvailableForMixer(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
-        //    if (IsOperator && newFeeder == null)
-        //    {
-        //        //if (ProcessOperator != null && !ProcessOperator.OperatorHasNotRestrictionToInitBatch && ProcessOperator.OcuppiedBy == this)
-        //        //{
-        //        //    //El operador es el feeder  no hay que asignar ni encolar
 
-        //        //}
-        //        return true;
-        //    }
-        //    if (newFeeder != null)
-        //    {
-
-        //        SetFeeder(newFeeder);
-        //        //Es bomba pero no es el operador o el operador es asignable porque no esta en uso en el mixer
-
-        //        Feeder?.ActualFlow = Feeder.Flow;
-        //        Feeder?.OcuppiedBy = this;
-        //        Feeder?.OutletState = new FeederIsInUseByAnotherEquipmentState(Feeder);
-
-        //        return true;
-
-        //    }
-        //    EnqueueForMaterialFeeder(CurrentManufactureOrder.CurrentStep.RawMaterialId.Value);
-
-
-        //    return false;
-        //}
-        // En tu clase ProcessMixer.cs
-
-        //public void ReleseCurrentMassStep()
-        //{
-        //    if (Feeder != null)
-        //    {
-        //        // 1. IMPORTANTE: Limpiar la ocupación en el tanque físico
-        //        // Esto es lo que le dice al tanque "Ya no me uses"
-        //        Feeder.OcuppiedBy = null!;
-
-        //        // 2. Cambiar el estado del tanque a Disponible
-        //        if (Feeder.OutletState is FeederIsInUseByAnotherEquipmentState)
-        //        {
-        //            Feeder.OutletState = new FeederAvailableState(Feeder);
-        //        }
-
-        //        // 3. Notificar al siguiente en la cola (en este caso, al Mixer B)
-        //        Feeder.NotifyNextWaitingEquipment();
-
-        //        // 4. Limpiar la referencia en el Mixer
-        //        Feeder = null!;
-        //    }
-        //}
-        //public void ReleseCurrentMassStep()
-        //{
-
-        //    if (Feeder != null)
-        //    {
-        //        ReleaseFeeder(Feeder);
-
-        //    }
-        //}
         void SentNewTransferRequestToWIP()
         {
             if (CurrentManufactureOrder != null)
@@ -387,15 +358,16 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
                 op.OutletState = new FeederIsInUseByAnotherEquipmentState(op);
                 CapturedOperator = op;
 
-                // --- PARCHE CRÍTICO ---
-                // Si el paso actual NO es manual (es decir, requiere una bomba/feeder real),
-                // el operario ya fue capturado como personal, así que debemos liberar el slot de Feeder
-                // para que la bomba de materia prima pueda ocuparlo.
+
                 if (!IsCurrentStepManualAddition())
                 {
                     if (Feeder == op)
                     {
                         SetFeeder(null!); // Vaciamos el slot de masa
+                    }
+                    if (op.Agenda.FirstOrDefault(x => x.OrderId == CurrentManufactureOrder.Id) is OperatorWorkTask task)
+                    {
+                        op.Agenda.Remove(task);
                     }
                 }
                 return true;
@@ -437,17 +409,24 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
 
         // Dentro de la clase parcial ProcessMixer
 
+
         public Amount GetTimeUntilMixerIsReadyForNewOrder()
         {
-            Amount totalWait = new Amount(0, TimeUnits.Minute);
+            Amount physicalWait = new Amount(0, TimeUnits.Minute);
 
-            // 1. Tiempo del Lote Activo (Si hay uno procesándose)
+            // 1. ¿Está procesando un lote mecánicamente?
             if (CurrentManufactureOrder != null)
             {
-                totalWait += CurrentManufactureOrder.PendingBatchTime.ConvertedTo(TimeUnits.Minute);
+                physicalWait += CurrentManufactureOrder.PendingBatchTime.ConvertedTo(TimeUnits.Minute);
+                var pendingMass = CurrentManufactureOrder.BatchSize;
+                var flowValue = (OutletPump?.Flow != null && OutletPump.Flow.Value > 0)
+                                ? OutletPump.Flow.GetValue(MassFlowUnits.Kg_min)
+                                : 1.0;
+
+                physicalWait += new Amount(pendingMass.GetValue(MassUnits.KiloGram) / flowValue, TimeUnits.Minute);
             }
 
-            // 2. Tiempo de Transferencia Activa (Si el mixer está bombeando masa ahora)
+            // 2. ¿Está transfiriendo masa (bombeando) ahora?
             if (CurrentTransferRequest != null)
             {
                 var pendingMass = CurrentTransferRequest.PendingToReceive;
@@ -455,40 +434,15 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
                                 ? OutletPump.Flow.GetValue(MassFlowUnits.Kg_min)
                                 : 1.0;
 
-                totalWait += new Amount(pendingMass.GetValue(MassUnits.KiloGram) / flowValue, TimeUnits.Minute);
+                physicalWait += new Amount(pendingMass.GetValue(MassUnits.KiloGram) / flowValue, TimeUnits.Minute);
             }
-
-            // --- PARCHE CORREGIDO: Sumar órdenes en cola ---
-            // Iteramos por las órdenes que están esperando su turno en este Mixer
-            foreach (var queuedOrder in ManufacturingOrders)
+            else
             {
-                // Buscamos la receta (IEquipmentMaterial) asociada al material de la orden en este mixer
-                var recipe = EquipmentMaterials.FirstOrDefault(x => x.Material.Id == queuedOrder.Material.Id);
 
-                if (recipe != null)
-                {
-                    // Así estaba... (Error: queuedOrder no tiene .Recipe)
-                    // totalWait += queuedOrder.Recipe.BatchCycleTime;
-
-                    // 1. Sumamos el ciclo de batch completo (BatchCycleTime)
-                    totalWait += recipe.BatchCycleTime;
-
-                    // 2. Sumamos el tiempo de transferencia proyectado para esa orden
-                    // $$Minutes = \frac{BatchSize}{Flow}$$
-                    var flow = (OutletPump?.Flow != null && OutletPump.Flow.Value > 0)
-                               ? OutletPump.Flow.GetValue(MassFlowUnits.Kg_min)
-                               : 1.0;
-
-                    double transferMinutes = queuedOrder.BatchSize.GetValue(MassUnits.KiloGram) / flow;
-                    totalWait += new Amount(transferMinutes, TimeUnits.Minute);
-                }
             }
-          
 
-            return totalWait;
-           
+            return physicalWait;
         }
-       
     }
 
 }

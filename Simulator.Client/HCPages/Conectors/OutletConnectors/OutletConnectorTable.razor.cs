@@ -1,6 +1,5 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.Conectors;
+﻿using QWENShared.DTOS.BaseEquipments;
+using QWENShared.DTOS.Conectors;
 
 namespace Simulator.Client.HCPages.Conectors.OutletConnectors
 {

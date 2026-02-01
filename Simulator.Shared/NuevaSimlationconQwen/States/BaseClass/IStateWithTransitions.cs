@@ -1,4 +1,5 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments;
+﻿using QWENShared.BaseClases.Equipments;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.States.BaseClass
 {

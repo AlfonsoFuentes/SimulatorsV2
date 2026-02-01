@@ -1,7 +1,5 @@
-﻿using Simulator.Client.HCPages.Materials;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.SKULines;
-using Simulator.Shared.Models.HCs.Materials;
+﻿using QWENShared.DTOS.SKULines;
+using QWENShared.Enums;
 
 namespace Simulator.Client.HCPages.SKULines
 {

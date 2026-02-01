@@ -1,11 +1,9 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using QWENShared.DTOS.LinePlanneds;
+using QWENShared.DTOS.Lines;
+using QWENShared.DTOS.PreferedMixers;
+using QWENShared.Enums;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.LinePlanneds;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.PreferedMixers;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simulator.Server.Databases.Entities.HC
@@ -75,8 +73,7 @@ namespace Simulator.Server.Databases.Entities.HC
                 case LinePlannedDTO request:
                     {
                         ShiftType = request.ShiftType;
-                        WIPLevelValue = request.WIPLevelValue;
-                        WIPLevelUnit = request.WIPLevelUnitName;
+                       
 
 
                     }
@@ -97,8 +94,7 @@ namespace Simulator.Server.Databases.Entities.HC
                     MainProcesId = HCSimulationPlanned == null ? Guid.Empty : HCSimulationPlanned.MainProcessId,
 
                     LineDTO = Line == null ? null! : Line.MapToDto<LineDTO>(),
-                    WIPLevelValue = WIPLevelValue,
-                    WIPLevelUnitName = WIPLevelUnit,
+                   
                     ShiftType = ShiftType,
                     SimulationPlannedId = SimulationPlannedId,
                     Order = Order,

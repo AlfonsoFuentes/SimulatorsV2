@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.Operators;
+using QWENShared.DTOS.Operators;
 
 namespace Simulator.Client.HCPages.Operators;
 public partial class OperatorDialog

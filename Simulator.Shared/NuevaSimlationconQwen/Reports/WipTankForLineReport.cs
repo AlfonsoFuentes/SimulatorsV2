@@ -4,7 +4,7 @@
     {
         public string Name { get; set; } = string.Empty;
         public Amount TotalStarvedTime => new Amount(Batches.Sum(b => b.TotalStarvedTime.GetValue(TimeUnits.Minute)), TimeUnits.Minute);
-        public Amount TotalRealBatchTime => new Amount(Batches.Sum(b => b.RealBatchTime.GetValue(TimeUnits.Minute)), TimeUnits.Minute);
+        public Amount TotalRealBatchTime => new Amount(Batches.Sum(b => b.TotalBatchTime.GetValue(TimeUnits.Minute)), TimeUnits.Minute);
         public double OverallStarvationPercentage =>
             TotalRealBatchTime.GetValue(TimeUnits.Minute) > 0
                 ? Math.Round((TotalStarvedTime.GetValue(TimeUnits.Minute) / TotalRealBatchTime.GetValue(TimeUnits.Minute)) * 100, 2)

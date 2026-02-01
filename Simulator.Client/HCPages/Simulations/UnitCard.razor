@@ -1,0 +1,49 @@
+﻿@using GeminiSimulator.DesignPatterns
+@* <div class="unit-card">
+    @if (Snapshot != null)
+    {
+        @foreach (var field in Snapshot)
+        {
+            <div class="field-row">
+                @if (field.Key != "Header") // El Header lo usamos para el título
+                {
+                    <span class="label">@field.Key:</span>
+                }
+
+                <span style="color: @field.Value.Color;
+                                     font-weight: @(field.Value.IsBold ? "bold" : "normal");
+                                     font-size: @field.Value.TextSize;"
+                      class="@field.Value.CssClass">
+                    @field.Value.Value
+                </span>
+            </div>
+        }
+    }
+</div> *@
+
+<MudPaper Elevation="1" Class="pa-2 mb-2" Style="border-left: 4px solid #555; min-width: 180px;">
+    @if (Snapshot != null)
+    {
+        @foreach (var field in Snapshot)
+        {
+            if (field.Key == "Header")
+            {
+                <MudText Typo="Typo.subtitle2" Style="font-weight: 800; text-transform: uppercase;">
+                    @field.Value.Value
+                </MudText>
+            }
+            else
+            {
+                <div class="d-flex justify-space-between align-center">
+                    <MudText Typo="Typo.caption" Class="text-secondary">@field.Key</MudText>
+                    <MudText Typo="Typo.body2" Style="@($"color: {field.Value.Color}; font-weight: {(field.Value.IsBold ? "700" : "400")}; font-size: 0.8rem;")">
+                        @field.Value.Value
+                    </MudText>
+                </div>
+            }
+        }
+    }
+</MudPaper>
+@code {
+    [Parameter] public Dictionary<string, ReportField>? Snapshot { get; set; }
+}

@@ -1,11 +1,5 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Server.EndPoints.HCs.Conectors;
-using Simulator.Server.EndPoints.HCs.EquipmentPlannedDownTimes;
-using Simulator.Server.EndPoints.HCs.MaterialEquipments;
-using Simulator.Server.EndPoints.HCs.SKULines;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.Lines;
+﻿using QWENShared.DTOS.Lines;
+using Simulator.Server.Databases.Entities.HC;
 
 namespace Simulator.Server.EndPoints.HCs.Lines
 {

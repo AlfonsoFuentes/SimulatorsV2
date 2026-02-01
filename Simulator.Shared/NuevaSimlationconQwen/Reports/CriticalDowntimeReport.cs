@@ -1,4 +1,5 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments;
+﻿using QWENShared.BaseClases.Equipments;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Reports
         public string Reason { get; }
         public string Description { get; }
 
-        public CriticalDowntimeReport(GeneralSimulation simulation,IEquipment generator, IEquipment? source, string reason, string description)
+        public CriticalDowntimeReport(GeneralSimulation simulation, IEquipment generator, IEquipment? source, string reason, string description)
         {
             _simulation = simulation;
             StartTime = _simulation.CurrentDate;

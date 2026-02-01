@@ -1,12 +1,10 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments;
+﻿using QWENShared.BaseClases.Equipments;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.States.PlannedDownTimes
 {
-    public interface IPlannedDownTimeState
-    {
-        bool CheckStatus(DateTime currentdate);
-    }
+   
     public class CheckScheduledPlannedDownTimeState : IPlannedDownTimeState
     {
         IEquipment _Equipment = null!;

@@ -1,9 +1,5 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.SKULines;
-using Simulator.Shared.Models.HCs.SKUs;
-using Simulator.Shared.Models.HCs.Washouts;
-using Web.Infrastructure.Managers.Generic;
+﻿using QWENShared.DTOS.SKULines;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 
 namespace Web.Infrastructure.Validators.FinishinLines.SKULines
 {

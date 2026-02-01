@@ -1,0 +1,31 @@
+﻿using GeminiSimulator.DesignPatterns;
+using QWENShared.Enums;
+
+namespace GeminiSimulator.PlantUnits.StreamJoiners
+{
+    public class StreamJoiner : PlantUnit
+    {
+        public StreamJoiner(Guid id, string name, ProccesEquipmentType type, FocusFactory factory)
+            : base(id, name, type, factory)
+        {
+        }
+
+        public override void CheckInitialStatus(DateTime InitialDate)
+        {
+            
+        }
+
+       
+
+
+        public override void InitialUpdate()
+        {
+            
+        }
+
+        public override void Update()
+        {
+            
+        }
+    }
+}

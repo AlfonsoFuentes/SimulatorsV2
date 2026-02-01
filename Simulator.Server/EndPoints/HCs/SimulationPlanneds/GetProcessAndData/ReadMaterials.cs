@@ -1,8 +1,8 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.Materials;
+﻿using QWENShared.DTOS.BackBoneSteps;
+using QWENShared.DTOS.Materials;
+using QWENShared.Enums;
+using Simulator.Server.Databases.Entities.HC;
+
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

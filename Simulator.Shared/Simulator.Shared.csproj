@@ -11,7 +11,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\QWENShared\QWENShared.csproj" />
     <ProjectReference Include="..\UnitSystem\UnitSystem.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Enums\HCEnums\" />
+    <Folder Include="Models\HCs\" />
+    <Folder Include="NuevaSimlationconQwen\Materials\" />
+    <Folder Include="Simulations\" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,6 @@
-﻿@using Simulator.Client.HCPages.BackBoneSteps
+﻿@using QWENShared.DTOS.Materials
+@using QWENShared.Enums
+@using Simulator.Client.HCPages.BackBoneSteps
 @using Simulator.Client.Services.Authentications
 @using Simulator.Client.Services.Identities.Accounts
 @using Simulator.Client.Services.Identities.Authentications
@@ -6,8 +8,7 @@
 @using Simulator.Client.Services.Interceptor
 @using Simulator.Client.Services.Navigations
 @using Simulator.Client.Services.SnackBars
-@using Simulator.Shared.Enums.HCEnums.Enums
-@using Simulator.Shared.Models.HCs.Materials
+
 <EditForm Model="@Model" OnValidSubmit="Submit">
     <MudCard>
         <MudCardContent>

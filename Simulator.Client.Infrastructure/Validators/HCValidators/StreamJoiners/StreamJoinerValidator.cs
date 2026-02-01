@@ -1,6 +1,6 @@
-﻿using Simulator.Client.Infrastructure.ExtensionMethods;
+﻿using QWENShared.DTOS.StreamJoiners;
+using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.StreamJoiners;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Simulator.Client.Infrastructure.Validators.HCValidators.StreamJoiners

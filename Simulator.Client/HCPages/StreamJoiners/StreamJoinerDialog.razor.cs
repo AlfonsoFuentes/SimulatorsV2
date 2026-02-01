@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.StreamJoiners;
+using QWENShared.DTOS.StreamJoiners;
 
 namespace Simulator.Client.HCPages.StreamJoiners;
 public partial class StreamJoinerDialog

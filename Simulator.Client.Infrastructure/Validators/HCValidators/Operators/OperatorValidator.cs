@@ -1,6 +1,6 @@
-﻿using Simulator.Client.Infrastructure.ExtensionMethods;
+﻿using QWENShared.DTOS.Operators;
+using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.Operators;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.Operators

@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.Washouts;
+using QWENShared.DTOS.Washouts;
 
 namespace Simulator.Client.HCPages.Washouts;
 public partial class WashoutDialog

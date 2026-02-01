@@ -1,7 +1,7 @@
-﻿using Simulator.Server.Databases.Entities.HC;
+﻿using QWENShared.DTOS.SimulationPlanneds;
+using Simulator.Server.Databases.Entities.HC;
 using Simulator.Server.EndPoints.HCs.MixerPlanneds;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
+
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds
 {
     public class SimulationPlannedEndPoint : IEndPoint

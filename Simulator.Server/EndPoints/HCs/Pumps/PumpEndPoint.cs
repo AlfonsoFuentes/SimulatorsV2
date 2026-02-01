@@ -1,6 +1,6 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.Pumps;
+﻿using QWENShared.DTOS.Pumps;
+using Simulator.Server.Databases.Entities.HC;
+
 
 namespace Simulator.Server.EndPoints.HCs.Pumps
 {

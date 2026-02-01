@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.Mixers;
+using QWENShared.DTOS.Mixers;
 
 namespace Simulator.Client.HCPages.Mixers;
 public partial class MixerDialog

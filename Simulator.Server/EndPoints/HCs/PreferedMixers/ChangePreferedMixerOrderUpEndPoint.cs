@@ -1,7 +1,4 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Models.HCs.PreferedMixers;
-
-namespace Simulator.Server.EndPoints.HCs.PreferedMixers
+﻿namespace Simulator.Server.EndPoints.HCs.PreferedMixers
 {
     //public static class ChangePreferedMixerOrderUpEndPoint
     //{

@@ -1,8 +1,7 @@
+using QWENShared.DTOS.BackBoneSteps;
+using QWENShared.DTOS.Materials;
+using QWENShared.Enums;
 using Simulator.Client.HCPages.Materials;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.Materials;
-using static MudBlazor.CategoryTypes;
 
 namespace Simulator.Client.HCPages.BackBoneSteps;
 public partial class BackBoneStepDialog
@@ -96,7 +95,7 @@ public partial class BackBoneStepDialog
 
     void ChangetoWashout()
     {
-        if (Model.BackBoneStepType == Shared.Enums.HCEnums.Enums.BackBoneStepType.Washout)
+        if (Model.BackBoneStepType == BackBoneStepType.Washout)
         {
             var rawmaterial = RawMaterials.FirstOrDefault(x => x.IsForWashing);
             if (rawmaterial != null)

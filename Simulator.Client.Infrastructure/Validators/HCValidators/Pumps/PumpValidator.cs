@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
+using QWENShared.DTOS.Pumps;
 using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.Pumps;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.Pumps

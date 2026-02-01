@@ -1,5 +1,4 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace Simulator.Shared.StaticClasses
 {

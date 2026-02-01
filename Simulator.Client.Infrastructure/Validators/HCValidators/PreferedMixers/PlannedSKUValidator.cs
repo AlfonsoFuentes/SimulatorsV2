@@ -1,5 +1,5 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.PreferedMixers;
+﻿using QWENShared.DTOS.PreferedMixers;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.PreferedMixers

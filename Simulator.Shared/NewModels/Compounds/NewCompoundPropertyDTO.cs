@@ -1,11 +1,4 @@
-﻿using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.CompoundProperties;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using Simulator.Shared.Models.CompoundProperties;
 
 namespace Simulator.Shared.NewModels.Compounds
 {

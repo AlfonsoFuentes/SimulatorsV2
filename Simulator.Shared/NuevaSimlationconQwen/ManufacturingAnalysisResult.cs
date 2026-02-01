@@ -1,5 +1,5 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.BaseClases.Material;
 using System.Collections.ObjectModel;
 
 namespace Simulator.Shared.NuevaSimlationconQwen

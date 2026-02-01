@@ -1,7 +1,7 @@
 ﻿
 using Simulator.Server.Databases.Contracts;
 using Simulator.Server.Interfaces.Database;
-using Simulator.Shared.Intefaces;
+
 
 namespace Simulator.Server.Repositories
 {

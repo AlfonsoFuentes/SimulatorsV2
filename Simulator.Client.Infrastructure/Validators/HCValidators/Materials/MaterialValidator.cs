@@ -1,7 +1,7 @@
-﻿using Simulator.Client.Infrastructure.ExtensionMethods;
+﻿using QWENShared.DTOS.Materials;
+using QWENShared.Enums;
+using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Materials;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.Materials

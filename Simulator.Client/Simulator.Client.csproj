@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\GeminiSimulator\GeminiSimulator.csproj" />
     <ProjectReference Include="..\Simulator.Client.Infrastructure\Simulator.Client.Infrastructure.csproj" />
     <ProjectReference Include="..\Simulator.Shared\Simulator.Shared.csproj" />
   </ItemGroup>

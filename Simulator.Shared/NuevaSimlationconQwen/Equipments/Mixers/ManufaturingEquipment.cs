@@ -1,5 +1,6 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.BaseClases.Material;
+using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
 {

@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.ContinuousSystems;
+using QWENShared.DTOS.ContinuousSystems;
 
 namespace Simulator.Client.HCPages.ContinuousSystems;
 public partial class ContinuousSystemDialog

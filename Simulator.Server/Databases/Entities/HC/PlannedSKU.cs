@@ -1,9 +1,6 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
+﻿using QWENShared.DTOS.PlannedSKUs;
+using QWENShared.DTOS.SKUs;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.PlannedSKUs;
-using Simulator.Shared.Models.HCs.SKUs;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

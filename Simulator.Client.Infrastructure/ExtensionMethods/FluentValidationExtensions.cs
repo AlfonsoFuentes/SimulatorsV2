@@ -1,5 +1,5 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Intefaces;
+﻿using QWENShared.DTOS.Base;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 using System.Linq.Expressions;
 
 namespace Simulator.Client.Infrastructure.ExtensionMethods

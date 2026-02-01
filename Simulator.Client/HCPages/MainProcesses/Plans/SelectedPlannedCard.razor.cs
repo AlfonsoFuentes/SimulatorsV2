@@ -1,5 +1,5 @@
-﻿using Simulator.Client.HCPages.SimulationPlanneds;
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
+﻿using QWENShared.DTOS.SimulationPlanneds;
+using Simulator.Client.HCPages.SimulationPlanneds;
 using Simulator.Shared.NuevaSimlationconQwen;
 
 namespace Simulator.Client.HCPages.MainProcesses.Plans

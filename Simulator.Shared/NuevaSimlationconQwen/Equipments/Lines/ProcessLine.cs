@@ -1,12 +1,5 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks.States;
+﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks.States;
 using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
-using Simulator.Shared.NuevaSimlationconQwen.Reports;
-using Simulator.Shared.NuevaSimlationconQwen.StreanJoiners;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 {

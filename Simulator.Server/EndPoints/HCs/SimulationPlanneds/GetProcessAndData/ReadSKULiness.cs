@@ -1,5 +1,5 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Models.HCs.SKULines;
+﻿using QWENShared.DTOS.SKULines;
+using Simulator.Server.Databases.Entities.HC;
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

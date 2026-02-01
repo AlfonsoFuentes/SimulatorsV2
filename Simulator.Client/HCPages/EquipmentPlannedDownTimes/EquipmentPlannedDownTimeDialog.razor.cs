@@ -1,7 +1,4 @@
-﻿using Simulator.Client.HCPages.Materials;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.EquipmentPlannedDownTimes;
-using Simulator.Shared.Models.HCs.Materials;
+﻿using QWENShared.DTOS.EquipmentPlannedDownTimes;
 
 namespace Simulator.Client.HCPages.EquipmentPlannedDownTimes
 {

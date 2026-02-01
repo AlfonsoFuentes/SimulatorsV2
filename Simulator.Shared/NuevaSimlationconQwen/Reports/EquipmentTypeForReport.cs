@@ -1,4 +1,5 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments;
+﻿using QWENShared.BaseClases.Equipments;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;

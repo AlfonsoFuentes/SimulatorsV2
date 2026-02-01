@@ -47,7 +47,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Reports
         {
             _timeAccumulators[type] += _mixer.OneSecond;
         }
-        public Amount BatchingTime => _timeAccumulators[MixerTimeType.Batching];
+        public Amount NetBatchTime => _timeAccumulators[MixerTimeType.Batching];
         public Amount WashingTime => _timeAccumulators[MixerTimeType.Washing];
         public Amount TransferingToWipTime => _timeAccumulators[MixerTimeType.TransferToWIP];
 
@@ -55,17 +55,17 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Reports
         public Amount StarvedTimeByFeeder => _timeAccumulators[MixerTimeType.StarvedByFeeder];
         public Amount StarvedTimeByOperator => _timeAccumulators[MixerTimeType.StarvedByOperator];
         public Amount StarvedTimeByWashoutPump => _timeAccumulators[MixerTimeType.StarvedByWashoutPump];
-        public Amount TheroticalBatchTime { get; set; } = new Amount(0, TimeUnits.Minute);
-        public Amount RealBatchTime => new Amount(_timeAccumulators.Sum(kv => kv.Value.GetValue(TimeUnits.Minute)), TimeUnits.Minute);
+   
+  
+        public Amount TotalBatchTime => new Amount(_timeAccumulators.Sum(kv => kv.Value.GetValue(TimeUnits.Minute)), TimeUnits.Minute);
         public Amount StarvedTimeTransferingToWip => _timeAccumulators[MixerTimeType.StarvedByTransferToWIP];
         public Amount StarvedTimeConnectingToWip => _timeAccumulators[MixerTimeType.ConnectingToWIP];
         public Amount TheroicalTransferTimeToWip { get; set; } = new Amount(0, TimeUnits.Minute);
         public Amount BatchSize { get; set; } = new Amount(0, MassUnits.KiloGram);
-        public Amount TotalStarvedTime => StarvedTimeByFeeder +
-    StarvedTimeByOperator +
-    StarvedTimeByWashoutPump + StarvedTimeTransferingToWip + StarvedTimeConnectingToWip;
+        public Amount BatchStarvedTime => StarvedTimeByFeeder +    StarvedTimeByOperator +    StarvedTimeByWashoutPump;
+         public Amount BatchCycleTime {  get; set; } =new Amount(0, TimeUnits.Minute);
 
-
+        public Amount TotalStarvedTime=> BatchStarvedTime + StarvedTimeTransferingToWip + StarvedTimeConnectingToWip;
 
     }
 }

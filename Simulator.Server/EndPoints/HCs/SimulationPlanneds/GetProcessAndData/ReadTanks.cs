@@ -1,6 +1,6 @@
 ﻿
+using QWENShared.DTOS.Tanks;
 using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Models.HCs.Tanks;
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

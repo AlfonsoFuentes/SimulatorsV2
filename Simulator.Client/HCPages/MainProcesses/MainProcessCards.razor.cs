@@ -1,6 +1,7 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.MainProcesss;
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
+﻿using GeminiSimulator.Main;
+using QWENShared.DTOS.MainProcesss;
+using QWENShared.DTOS.SimulationPlanneds;
+using QWENShared.Enums;
 using Simulator.Shared.NuevaSimlationconQwen;
 using Simulator.Shared.Simulations;
 using static Simulator.Shared.StaticClasses.StaticClass;
@@ -82,16 +83,16 @@ namespace Simulator.Client.HCPages.MainProcesses
 
             if (!result!.Canceled)
             {
-               
+
                 var resultDelete = await ClientService.Delete(response);
                 if (resultDelete.Succeeded)
                 {
                     await GetAll();
-                   
+
 
 
                 }
-                
+
             }
 
         }
@@ -114,16 +115,16 @@ namespace Simulator.Client.HCPages.MainProcesses
 
             if (!result!.Canceled)
             {
-                
+
                 var resultDelete = await ClientService.DeleteGroup(SelecteItems.ToList());
                 if (resultDelete.Succeeded)
                 {
                     await GetAll();
-                 
+
                     SelecteItems = null!;
 
                 }
-               
+
             }
 
         }
@@ -169,9 +170,9 @@ namespace Simulator.Client.HCPages.MainProcesses
             Simulation = null!;
             var result = await ClientService.GetById(new NewSimulationDTO()
             {
-                 Id = MainProcessId,
-              
-                FocusFactory= FocusFactory,
+                Id = MainProcessId,
+
+                FocusFactory = FocusFactory,
 
 
 
@@ -179,30 +180,37 @@ namespace Simulator.Client.HCPages.MainProcesses
             if (result.Succeeded)
             {
 
-              
+
                 SimulationDTO = result.Data;
 
                 if (SimulationDTO != null)
                 {
+                    Context = _builder.BuildPhysicalPlant(SimulationDTO);
                     Simulation = new GeneralSimulation();
                     Simulation.ReadSimulationDataFromDTO(SimulationDTO);
 
                     if (SelectedPlanned != null)
+                    {
                         Simulation.SetPlanned(SelectedPlanned);
+                        _builder.ApplyProductionPlan(SelectedPlanned);
+                        _engine = new SimulationEngine(Context, Context.Scenario!);
+                    }
+
                     SimulationLoading = false;
                     StateHasChanged();
-              
+
                 }
 
 
 
 
             }
-           
-        }
 
+        }
+        SimulationContext Context = new();
+        SimulationBuilder _builder = new SimulationBuilder();
         public List<SimulationPlannedDTO> PlannedItems { get; set; } = new();
-     
+
         async Task GetAllPlanneds(Guid _MainProcessId)
         {
             var result = await ClientService.GetAll(new SimulationPlannedDTO()
@@ -218,13 +226,19 @@ namespace Simulator.Client.HCPages.MainProcesses
             }
         }
         SimulationPlannedDTO SelectedPlanned { get; set; } = null!;
+        SimulationEngine _engine = null!;
         async Task SelectPlan(SimulationPlannedDTO planned)
         {
             await Task.Delay(1);
             SelectedPlanned = planned;
             if (!SimulationLoading && Simulation != null)
+            {
                 Simulation.SetPlanned(planned);
-            Showplanned = false;
+                Showplanned = false;
+                _builder.ApplyProductionPlan(SelectedPlanned);
+                _engine = new SimulationEngine(Context, Context.Scenario!);
+            }
+
             StateHasChanged();
         }
     }

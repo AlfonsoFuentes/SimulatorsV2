@@ -88,17 +88,17 @@
     };
 
     private bool HasData(ProcessMixer mixer) =>
-        mixer.BatchReports.Any(r => r.RealBatchTime.Value > 0);
+        mixer.BatchReports.Any(r => r.NetBatchTime.Value > 0);
 
     private double GetTotalRealTime(ProcessMixer mixer) =>
-        mixer.BatchReports.Sum(r => r.RealBatchTime.GetValue(TimeUnits.Minute));
+        mixer.BatchReports.Sum(r => r.NetBatchTime.GetValue(TimeUnits.Minute));
 
     private double[] GetMixerData(ProcessMixer mixer)
     {
         // Obtenemos todos los tiempos acumulados de los reportes
         var rawData = new[]
         {
-            mixer.BatchReports.Sum(r => r.BatchingTime.GetValue(TimeUnits.Minute)),
+            mixer.BatchReports.Sum(r => r.NetBatchTime.GetValue(TimeUnits.Minute)),
             mixer.BatchReports.Sum(r => r.WashingTime.GetValue(TimeUnits.Minute)),
             mixer.BatchReports.Sum(r => r.TransferingToWipTime.GetValue(TimeUnits.Minute)),
 

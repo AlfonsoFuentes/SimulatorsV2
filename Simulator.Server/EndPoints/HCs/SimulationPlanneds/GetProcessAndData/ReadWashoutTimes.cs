@@ -1,6 +1,6 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.Washouts;
+﻿using QWENShared.DTOS.Washouts;
+using Simulator.Server.Databases.Entities.HC;
+
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

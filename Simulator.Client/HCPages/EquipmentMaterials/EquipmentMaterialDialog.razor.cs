@@ -1,7 +1,7 @@
-﻿using Simulator.Client.HCPages.Materials;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.MaterialEquipments;
-using Simulator.Shared.Models.HCs.Materials;
+﻿using QWENShared.DTOS.MaterialEquipments;
+using QWENShared.DTOS.Materials;
+using QWENShared.Enums;
+using Simulator.Client.HCPages.Materials;
 using System.Collections.Generic;
 
 namespace Simulator.Client.HCPages.EquipmentMaterials

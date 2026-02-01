@@ -1,10 +1,11 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks.States;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.BaseClases.Material;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks.States;
 using Simulator.Shared.NuevaSimlationconQwen.Reports;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
 {
-    public abstract class ProcessBaseTankForRawMaterial : ProcessBaseTank, ISetMaterialsAtOutlet,ILiveReportable
+    public abstract class ProcessBaseTankForRawMaterial : ProcessBaseTank, ISetMaterialsAtOutlet, ILiveReportable
     {
       
        

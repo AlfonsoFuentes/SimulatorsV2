@@ -1,10 +1,10 @@
 ﻿using DocumentFormat.OpenXml.ExtendedProperties;
 using DocumentFormat.OpenXml.Vml.Office;
+using QWENShared.DTOS.Conectors;
+using QWENShared.DTOS.EquipmentPlannedDownTimes;
+using QWENShared.DTOS.MaterialEquipments;
+using QWENShared.DTOS.SKULines;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Models.HCs.Conectors;
-using Simulator.Shared.Models.HCs.EquipmentPlannedDownTimes;
-using Simulator.Shared.Models.HCs.MaterialEquipments;
-using Simulator.Shared.Models.HCs.SKULines;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

@@ -1,5 +1,5 @@
-﻿using Simulator.Client.HCPages.PreferedMixers;
-using Simulator.Shared.Models.HCs.PreferedMixers;
+﻿using QWENShared.DTOS.PreferedMixers;
+using Simulator.Client.HCPages.PreferedMixers;
 
 namespace Simulator.Client.HCPages.PreferedMixers
 {

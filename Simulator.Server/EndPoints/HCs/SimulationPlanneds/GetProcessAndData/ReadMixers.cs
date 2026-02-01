@@ -1,8 +1,6 @@
 ﻿
+using QWENShared.DTOS.Mixers;
 using Simulator.Server.Databases.Entities.HC;
-using Simulator.Server.EndPoints.HCs.Mixers;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.Mixers;
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

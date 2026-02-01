@@ -1,6 +1,5 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.PlannedSKUs;
-using Web.Infrastructure.Managers.Generic;
+﻿using QWENShared.DTOS.PlannedSKUs;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 
 namespace Web.Infrastructure.Validators.FinishinLines.PlannedSKUs
 {

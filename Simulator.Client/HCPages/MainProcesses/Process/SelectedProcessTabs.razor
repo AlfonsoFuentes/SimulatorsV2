@@ -1,13 +1,18 @@
-﻿@using Simulator.Client.HCPages.NewProcessSimulation
+﻿@using GeminiSimulator.Main
+@using QWENShared.Enums
+@using Simulator.Client.HCPages.NewProcessSimulation
+@using Simulator.Client.HCPages.Simulations
 @using Simulator.Client.HCPages.StreamJoiners
 @using Simulator.Shared.NuevaSimlationconQwen
-<MudTabs>
+<MudTabs KeepPanelsAlive="true">
     <MudTabPanel Text="PFD">
         <NewProcessFlowDiagram Simulation="@Simulation" GetAll="GetAll" />
     </MudTabPanel>
     <MudTabPanel Text="Simulation">
-        <SimulationTabs Simulation="@Simulation"></SimulationTabs>
+        <NewSimulationDashBoard Engine="@Engine"></NewSimulationDashBoard>
+
     </MudTabPanel>
+ 
     <MudTabPanel Text="Mixer Capacity">
         <NewProductionCapacityReport Simulation=@Simulation />
     </MudTabPanel>
@@ -32,10 +37,12 @@
     <MudTabPanel Text="Lines">
         <LineTable FocusFactory=@FocusFactory MainProcessId="@MainProcessId" RefreshProcessFlowDiagram="GetAll"></LineTable>
     </MudTabPanel>
-  
+
 </MudTabs>
 
 @code {
+
+    [Parameter, EditorRequired] public SimulationEngine Engine { get; set; } = null!;
     [Parameter]
     public GeneralSimulation Simulation { get; set; } = null!;
     [Parameter]

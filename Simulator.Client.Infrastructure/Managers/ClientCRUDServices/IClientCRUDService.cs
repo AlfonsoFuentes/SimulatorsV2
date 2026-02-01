@@ -1,12 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using QWENShared.DTOS.Base;
 using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Shared.Commons;
-using Simulator.Shared.Intefaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Web.Infrastructure.Services.Client;
 
 namespace Simulator.Client.Infrastructure.Managers.ClientCRUDServices

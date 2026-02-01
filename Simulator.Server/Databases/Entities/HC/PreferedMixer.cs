@@ -1,11 +1,6 @@
-﻿using DocumentFormat.OpenXml.Drawing.Charts;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
+﻿using QWENShared.DTOS.Mixers;
+using QWENShared.DTOS.PreferedMixers;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.Mixers;
-using Simulator.Shared.Models.HCs.PreferedMixers;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

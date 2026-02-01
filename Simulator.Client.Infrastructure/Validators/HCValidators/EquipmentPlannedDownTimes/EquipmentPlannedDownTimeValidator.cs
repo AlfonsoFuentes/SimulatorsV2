@@ -1,5 +1,5 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.EquipmentPlannedDownTimes;
+﻿using QWENShared.DTOS.EquipmentPlannedDownTimes;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.EquipmentPlannedDownTimes

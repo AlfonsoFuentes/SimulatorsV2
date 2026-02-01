@@ -1,5 +1,5 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Models.HCs.BaseEquipments;
+﻿using QWENShared.DTOS.BaseEquipments;
+using Simulator.Server.Databases.Entities.HC;
 
 namespace Simulator.Server.EndPoints.HCs.ProccesEquipments
 {

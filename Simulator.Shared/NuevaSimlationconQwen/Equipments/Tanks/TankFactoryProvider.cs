@@ -1,5 +1,5 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Tanks;
+﻿using QWENShared.DTOS.Tanks;
+using QWENShared.Enums;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
 {

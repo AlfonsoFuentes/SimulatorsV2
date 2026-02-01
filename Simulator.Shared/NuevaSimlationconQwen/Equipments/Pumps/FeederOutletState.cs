@@ -1,4 +1,5 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.States.BaseClass;
+﻿using QWENShared.BaseClases.Equipments;
+using Simulator.Shared.NuevaSimlationconQwen.States.BaseClass;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps
 {

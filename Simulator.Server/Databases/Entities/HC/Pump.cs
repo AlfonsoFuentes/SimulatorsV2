@@ -1,9 +1,7 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
+﻿using QWENShared.DTOS.Pumps;
+using QWENShared.Enums;
 using Simulator.Server.Databases.Contracts;
 using Simulator.Server.ExtensionsMethods.Validations;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.Pumps;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

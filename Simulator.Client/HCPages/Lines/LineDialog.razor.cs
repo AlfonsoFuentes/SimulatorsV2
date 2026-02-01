@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.Lines;
+using QWENShared.DTOS.Lines;
 
 namespace Simulator.Client.HCPages.Lines;
 public partial class LineDialog

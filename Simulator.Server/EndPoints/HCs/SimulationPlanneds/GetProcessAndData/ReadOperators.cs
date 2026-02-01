@@ -1,8 +1,5 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Server.EndPoints.HCs.MaterialEquipments;
-using Simulator.Server.EndPoints.HCs.Operators;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.Operators;
+﻿using QWENShared.DTOS.Operators;
+using Simulator.Server.Databases.Entities.HC;
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

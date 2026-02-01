@@ -1,8 +1,8 @@
 ﻿using FluentValidation;
+using QWENShared.DTOS.SKUs;
+using QWENShared.Enums;
 using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.SKUs;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.SKUs

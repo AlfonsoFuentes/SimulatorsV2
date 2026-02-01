@@ -1,10 +1,10 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.MaterialEquipments;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.BaseClases.Material;
+using QWENShared.Enums;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Skids;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
 
 namespace Simulator.Shared.NuevaSimlationconQwen
 {

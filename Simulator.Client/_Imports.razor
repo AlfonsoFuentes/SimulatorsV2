@@ -12,7 +12,16 @@
 @using Microsoft.JSInterop
 @using MudBlazor
 @using Simulator.Client.Infrastructure.Managers.ClientCRUDServices
-@using Simulator.Shared.Models.HCs.Materials
+@using QWENShared.DTOS.Conectors
+@using QWENShared.DTOS.Materials
+@using QWENShared.DTOS.SKULines
+@using QWENShared.Enums
+@using QWENShared.BaseClases.Material
+@using Simulator.Shared.NuevaSimlationconQwen
+@using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers
+@using Simulator.Shared.NuevaSimlationconQwen.Equipments.Skids
+@using QWENShared.DTOS.MaterialEquipments
+@using QWENShared.DTOS.EquipmentPlannedDownTimes
 @using Simulator.Client
 @using Simulator.Client.Layout
 @using Simulator.Client.Services.Authentications
@@ -25,17 +34,15 @@
 @using Simulator.Client.Templates
 
 @using Simulator.Client.HCPages.BackBoneSteps
-@using Simulator.Shared.Models.HCs.MaterialEquipments
-@using Simulator.Shared.Enums.HCEnums.Enums
+
 @using UnitSystem
 @using System.Linq.Expressions
 @using System.Globalization
 @using Simulator.Client.HCPages.Materials
-@using Simulator.Shared.Models.HCs.Conectors
+
 @using Simulator.Client.HCPages.EquipmentMaterials
 @using Simulator.Client.HCPages.Conectors.InletConnectors
-@using Simulator.Shared.Models.HCs.SKULines
-@using Simulator.Shared.Models.HCs.EquipmentPlannedDownTimes
+
 @using Simulator.Client.HCPages.EquipmentPlannedDownTimes
 @using Simulator.Client.HCPages.SKULines
 @using Simulator.Client.HCPages.Conectors.OutletConnectors
@@ -48,11 +55,11 @@
 @using Simulator.Client.HCPages.Operators
 @using Simulator.Client.HCPages.Pumps
 @using Simulator.Client.HCPages.Tanks
-@using Simulator.Shared.Models.HCs.SimulationPlanneds
+
 
 @using System
 @using System.Linq
-@using Simulator.Shared.NuevaSimlationconQwen
+
 @using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines
 @using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
 @using Simulator.Shared.NuevaSimlationconQwen.Reports

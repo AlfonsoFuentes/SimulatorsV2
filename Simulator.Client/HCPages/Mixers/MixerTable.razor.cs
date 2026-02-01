@@ -1,8 +1,5 @@
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Mixers;
-
-
-
+using QWENShared.DTOS.Mixers;
+using QWENShared.Enums;
 
 namespace Simulator.Client.HCPages.Mixers;
 public partial class MixerTable

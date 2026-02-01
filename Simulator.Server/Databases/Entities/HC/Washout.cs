@@ -1,10 +1,6 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
+﻿using QWENShared.DTOS.Washouts;
+using QWENShared.Enums;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.Washouts;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

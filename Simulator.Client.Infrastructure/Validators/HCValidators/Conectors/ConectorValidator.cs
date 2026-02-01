@@ -1,9 +1,5 @@
-﻿using FluentValidation;
+﻿using QWENShared.DTOS.Conectors;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Conectors;
-using Simulator.Shared.Models.HCs.Washouts;
-using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.Conectors
 {

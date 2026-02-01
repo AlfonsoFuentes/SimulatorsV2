@@ -1,6 +1,6 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.EquipmentPlannedDownTimes;
+﻿using QWENShared.DTOS.BaseEquipments;
+using QWENShared.DTOS.EquipmentPlannedDownTimes;
+using Simulator.Server.Databases.Entities.HC;
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

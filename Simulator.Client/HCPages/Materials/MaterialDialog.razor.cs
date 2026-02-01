@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.Materials;
+using QWENShared.DTOS.Materials;
 
 namespace Simulator.Client.HCPages.Materials;
 public partial class MaterialDialog

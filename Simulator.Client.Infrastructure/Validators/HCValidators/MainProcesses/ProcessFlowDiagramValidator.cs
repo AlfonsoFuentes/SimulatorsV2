@@ -1,7 +1,7 @@
-﻿using Simulator.Client.Infrastructure.ExtensionMethods;
+﻿using QWENShared.DTOS.MainProcesss;
+using QWENShared.Enums;
+using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.MainProcesss;
 using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.MainProcesss

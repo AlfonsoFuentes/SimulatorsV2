@@ -1,4 +1,5 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.Enums;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Reports

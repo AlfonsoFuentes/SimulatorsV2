@@ -1,11 +1,6 @@
-﻿using DocumentFormat.OpenXml.Drawing.Charts;
-using DocumentFormat.OpenXml.Spreadsheet;
+﻿using QWENShared.DTOS.Base;
+using QWENShared.DTOS.EquipmentPlannedDownTimes;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Server.ExtensionsMethods.Validations;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.ContinuousSystems;
-using Simulator.Shared.Models.HCs.EquipmentPlannedDownTimes;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using QWENShared.DTOS.Base;
+using QWENShared.DTOS.Mixers;
+using QWENShared.Enums;
 using Simulator.Server.Databases.Contracts;
 using Simulator.Server.ExtensionsMethods.Validations;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.Mixers;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simulator.Server.Databases.Entities.HC

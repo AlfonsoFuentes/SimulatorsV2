@@ -1,10 +1,8 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using QWENShared.DTOS.Base;
+using QWENShared.DTOS.BaseEquipments;
+using QWENShared.Enums;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.Conectors;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simulator.Server.Databases.Entities.HC

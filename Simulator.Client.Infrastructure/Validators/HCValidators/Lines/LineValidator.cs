@@ -1,10 +1,7 @@
-﻿using FluentValidation;
+﻿using QWENShared.DTOS.Lines;
+using QWENShared.Enums;
 using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Lines;
-using UnitSystem;
-using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.Lines
 {

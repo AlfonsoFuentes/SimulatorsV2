@@ -1,5 +1,5 @@
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.PlannedSKUs;
+using QWENShared.DTOS.PlannedSKUs;
+
 
 namespace Simulator.Client.HCPages.PlannedSKUs;
 public partial class PlannedSKUTable

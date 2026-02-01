@@ -1,13 +1,7 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
+﻿using QWENShared.DTOS.Base;
+using QWENShared.DTOS.MaterialEquipments;
+using QWENShared.DTOS.Materials;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.MaterialEquipments;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.Washouts;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments;
-using System.Security.AccessControl;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

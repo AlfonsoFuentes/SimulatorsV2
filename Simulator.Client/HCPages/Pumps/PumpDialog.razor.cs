@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.Pumps;
+using QWENShared.DTOS.Pumps;
 
 namespace Simulator.Client.HCPages.Pumps;
 public partial class PumpDialog

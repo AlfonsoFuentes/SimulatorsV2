@@ -1,18 +1,10 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments;
+﻿using QWENShared.BaseClases.Equipments;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.States.BaseClass
 {
    
-    public interface IEquipmentState
-    {
-       
-        string StateLabel { get; set; }
-        void CheckStatus(DateTime CurrentDate);
-        void Run(DateTime CurrentDate);
-        void Report(DateTime CurrentDate);
-        void Calculate(DateTime currentdate);
-
-    }
+   
     public abstract class EquipmentState : IEquipmentState
     {
        

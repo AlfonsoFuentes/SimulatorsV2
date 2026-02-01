@@ -1,9 +1,6 @@
-﻿using FluentValidation;
+﻿using QWENShared.DTOS.Washouts;
+using QWENShared.Enums;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.Tanks;
-using Simulator.Shared.Models.HCs.Washouts;
-using Web.Infrastructure.Managers.Generic;
 
 namespace Web.Infrastructure.Validators.FinishinLines.Washouts
 {

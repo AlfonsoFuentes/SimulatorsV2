@@ -1,0 +1,48 @@
+﻿.factory-floor {
+    display: grid;
+    grid-template-columns: 200px 250px 1fr; /* Tres bloques principales */
+    gap: 20px;
+    padding: 20px;
+    background-color: #1a1a1a;
+    min-height: 100vh;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    border-right: 1px solid #333;
+    padding-right: 10px;
+}
+
+    .column h3 {
+        color: #00d4ff;
+        text-align: center;
+        font-size: 1rem;
+        text-transform: uppercase;
+    }
+
+.column-dual {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.header-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr; /* Espejo de la fila de alineación */
+    text-align: center;
+}
+
+.alignment-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    align-items: center;
+    gap: 10px;
+}
+
+.flow-arrow {
+    color: #555;
+    font-size: 1.5rem;
+    text-align: center;
+}

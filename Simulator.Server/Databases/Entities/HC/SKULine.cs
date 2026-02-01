@@ -1,7 +1,6 @@
-﻿using Simulator.Server.Databases.Contracts;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.SKULines;
-using Simulator.Shared.Models.HCs.SKUs;
+﻿using QWENShared.DTOS.SKULines;
+using QWENShared.DTOS.SKUs;
+using Simulator.Server.Databases.Contracts;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

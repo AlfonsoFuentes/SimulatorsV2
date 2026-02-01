@@ -1,13 +1,9 @@
-﻿using Simulator.Server.Databases.Contracts;
-using Simulator.Server.Databases.Entities.Equilibrio;
+﻿using QWENShared.DTOS.BackBoneSteps;
+using QWENShared.DTOS.Materials;
+using QWENShared.Enums;
+using Simulator.Server.Databases.Contracts;
 using Simulator.Server.ExtensionsMethods.Validations;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.NewModels.Compounds;
 using System.ComponentModel.DataAnnotations.Schema;
-using static MudBlazor.TimeSeriesChartSeries;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

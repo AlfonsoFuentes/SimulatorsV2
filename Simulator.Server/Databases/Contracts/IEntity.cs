@@ -1,4 +1,4 @@
-﻿using Simulator.Shared.Intefaces;
+﻿using QWENShared.DTOS.Base;
 
 namespace Simulator.Server.Databases.Contracts
 {

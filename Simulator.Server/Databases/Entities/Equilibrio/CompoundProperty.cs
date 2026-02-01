@@ -1,6 +1,5 @@
 ﻿using Simulator.Server.Databases.Contracts;
 using Simulator.Server.EndPoints.Properties;
-using Simulator.Shared.Intefaces;
 using Simulator.Shared.NewModels.Compounds;
 using System.ComponentModel.DataAnnotations.Schema;
 

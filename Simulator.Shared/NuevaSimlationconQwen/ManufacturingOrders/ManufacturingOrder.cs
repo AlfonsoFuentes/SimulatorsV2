@@ -1,11 +1,10 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.BaseClases.Material;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks.States;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
 using Simulator.Shared.NuevaSimlationconQwen.Reports;
-using static Simulator.Shared.StaticClasses.StaticClass;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
 {
@@ -71,6 +70,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
     }
     public interface IWIPManufactureOrder : ITankManufactureOrder
     {
+        Guid Id { get; }
         ProcessLine Line { get; }
         Amount MassPendingToDeliver { get; }
         Amount AverageOutletFlow { get; }
@@ -305,6 +305,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
         public Amount TotalQuantityToProduce { get; set; } = new Amount(0, MassUnits.KiloGram);
         public Amount TimeToChangeSKU => SKU.TimeToChangeFormat;
         public Amount AverageFlow => ProductionSKURun.AverageMassFlow;
+        public Amount MaxFlow => ProductionSKURun.MaxMassFlow;
         public List<ManufaturingEquipment> PreferredManufacturer { get; set; } = new();
         // ✅ Constructor seguro
 
@@ -425,7 +426,8 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
         Amount CurrentStarvedTime { get; }
         int TotalSteps { get; set; }
         ManufaturingEquipment ManufaturingEquipment { get; }
-      
+        Guid Id { get; }
+
     }
     public class MixerManufactureOrder : IManufactureOrder
     {
@@ -453,7 +455,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
                 {
                     TotalSteps = recipe.RecipeSteps.Count;
                     BatchSize = equipmentmaterial.BatchSize;
-                    BatchTime = equipmentmaterial.BatchCycleTime;
+                    BatchCycleTime = equipmentmaterial.BatchCycleTime;
                     foreach (var item in recipe.RecipeSteps.OrderBy(x => x.StepNumber))
                     {
 
@@ -471,12 +473,12 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
 
 
         public Amount BatchSize { get; set; } = new(0, MassUnits.KiloGram);
-        public Amount BatchTime { get; set; } = new(0, MassUnits.KiloGram);
-        public Amount RealBatchTime => BatchTime + CurrentStarvedTime;
-        public Amount CurrentStarvedTime => BatchReport.TotalStarvedTime;
+        public Amount BatchCycleTime { get; set; } = new(0, TimeUnits.Minute);
 
-        public Amount CurrentBatchTime => BatchReport.RealBatchTime;
-        public Amount TheoricalPendingBatchTime => BatchTime - CurrentBatchTime;
+        public Amount CurrentBatchTime => BatchReport.TotalBatchTime;
+        public Amount CurrentStarvedTime => CurrentBatchTime- NetBatchTime;
+        public Amount NetBatchTime => BatchReport.NetBatchTime;
+
         public Amount CurrentMixerLevel => ManufaturingEquipment.CurrentLevel;
         public bool IsBatchFinished { get; set; } = false;
         public bool IsBatchStarved { get; set; } = false;
@@ -484,7 +486,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders
         public IRecipeStep CurrentStep { get; set; } = null!;
         public Queue<IRecipeStep> RecipeSteps { get; set; } = new Queue<IRecipeStep>();
         public IManufactureFeeder SelectedFeder { get; set; } = null!;
-        public Amount PendingBatchTime => RealBatchTime - CurrentBatchTime;
+        public Amount PendingBatchTime => BatchCycleTime - NetBatchTime;
 
     }
     public class SKIDManufactureOrder : IManufactureOrder

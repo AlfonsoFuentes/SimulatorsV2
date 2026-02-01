@@ -1,6 +1,6 @@
-﻿using Simulator.Client.Infrastructure.ExtensionMethods;
+﻿using QWENShared.DTOS.ContinuousSystems;
+using Simulator.Client.Infrastructure.ExtensionMethods;
 using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
-using Simulator.Shared.Models.HCs.ContinuousSystems;
 using UnitSystem;
 using Web.Infrastructure.Managers.Generic;
 

@@ -1,28 +1,4 @@
-﻿using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.ContinuousSystems;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.MaterialEquipments;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.Mixers;
-using Simulator.Shared.Models.HCs.Operators;
-using Simulator.Shared.Models.HCs.Pumps;
-using Simulator.Shared.Models.HCs.SimulationPlanneds;
-using Simulator.Shared.Models.HCs.StreamJoiners;
-using Simulator.Shared.Models.HCs.Tanks;
-using Simulator.Shared.Models.HCs.Washouts;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Lines;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Skids;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
-using Simulator.Shared.NuevaSimlationconQwen.Reports;
-using Simulator.Shared.NuevaSimlationconQwen.States.PlannedDownTimes;
-using Simulator.Shared.NuevaSimlationconQwen.StreanJoiners;
-using Simulator.Shared.Simulations;
+﻿
 
 namespace Simulator.Shared.NuevaSimlationconQwen
 {
@@ -226,12 +202,12 @@ namespace Simulator.Shared.NuevaSimlationconQwen
         }
         void ReadOperatorsForMixers(SimulationPlannedDTO planned)
         {
-            var operatorsforMixers = Equipments.OfType<ProcessMixer>().SelectMany(x => x.InletEquipments.OfType<ProcessOperator>()).ToList();
-            foreach (var operators in operatorsforMixers)
-            {
-                operators.OperatorHasNotRestrictionToInitBatch = planned.OperatorHasNotRestrictionToInitBatch;
-                operators.MaxRestrictionTime = planned.MaxRestrictionTime;
-            }
+            //var operatorsforMixers = Equipments.OfType<ProcessMixer>().SelectMany(x => x.InletEquipments.OfType<ProcessOperator>()).ToList();
+            ////foreach (var operators in operatorsforMixers)
+            ////{
+            ////    operators.OperatorHasNotRestrictionToInitBatch = planned.OperatorHasNotRestrictionToInitBatch;
+            ////    operators.MaxRestrictionTime = planned.MaxRestrictionTime;
+            ////}
 
 
 

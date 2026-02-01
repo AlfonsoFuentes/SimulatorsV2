@@ -1,8 +1,5 @@
-﻿using Simulator.Server.Databases.Entities.HC;
-
-using Simulator.Server.EndPoints.HCs.ContinuousSystems;
-using Simulator.Shared.Models.HCs.ContinuousSystems;
-using Simulator.Shared.Models.HCs.Mixers;
+﻿using QWENShared.DTOS.ContinuousSystems;
+using Simulator.Server.Databases.Entities.HC;
 using Simulator.Shared.Simulations;
 namespace Simulator.Server.EndPoints.HCs.SimulationPlanneds.GetProcessAndData
 {

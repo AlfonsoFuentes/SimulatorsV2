@@ -1,4 +1,4 @@
-﻿using Simulator.Shared.Models.HCs.MainProcesss;
+﻿using QWENShared.DTOS.MainProcesss;
 
 namespace Simulator.Client.HCPages.MainProcesses
 {

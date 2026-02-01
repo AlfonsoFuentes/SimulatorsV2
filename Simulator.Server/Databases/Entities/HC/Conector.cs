@@ -1,13 +1,8 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
+﻿using QWENShared.DTOS.Base;
+using QWENShared.DTOS.BaseEquipments;
+using QWENShared.DTOS.Conectors;
+using QWENShared.DTOS.Lines;
 using Simulator.Server.Databases.Contracts;
-using Simulator.Server.ExtensionsMethods.Validations;
-using Simulator.Shared.Enums.HCEnums.Enums;
-using Simulator.Shared.Intefaces;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.Conectors;
-using Simulator.Shared.Models.HCs.Lines;
-using Simulator.Shared.Models.HCs.Washouts;
 
 namespace Simulator.Server.Databases.Entities.HC
 {

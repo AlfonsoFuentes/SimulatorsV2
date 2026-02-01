@@ -1,9 +1,9 @@
-﻿using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
-using Simulator.Shared.NuevaSimlationconQwen.Equipments.Operators;
+﻿using QWENShared.BaseClases.Equipments;
+using QWENShared.BaseClases.Material;
+using Simulator.Shared.NuevaSimlationconQwen.Equipments.Mixers;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Pumps;
 using Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks;
 using Simulator.Shared.NuevaSimlationconQwen.ManufacturingOrders;
-using Simulator.Shared.NuevaSimlationconQwen.Materials;
 using Simulator.Shared.NuevaSimlationconQwen.Reports;
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Skids

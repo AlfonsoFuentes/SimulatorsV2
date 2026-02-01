@@ -1,5 +1,4 @@
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.MixerPlanneds;
+using QWENShared.DTOS.MixerPlanneds;
 
 namespace Simulator.Client.HCPages.MixerPlanneds;
 public partial class MixerPlannedTable

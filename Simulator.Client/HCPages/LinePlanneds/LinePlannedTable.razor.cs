@@ -1,4 +1,4 @@
-using Simulator.Shared.Models.HCs.LinePlanneds;
+using QWENShared.DTOS.LinePlanneds;
 
 namespace Simulator.Client.HCPages.LinePlanneds;
 public partial class LinePlannedTable

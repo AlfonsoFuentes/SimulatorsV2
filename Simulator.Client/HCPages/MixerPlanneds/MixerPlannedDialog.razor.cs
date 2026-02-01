@@ -1,10 +1,10 @@
-using Simulator.Shared.Models.HCs.BackBoneSteps;
-using Simulator.Shared.Models.HCs.BaseEquipments;
-using Simulator.Shared.Models.HCs.Conectors;
-using Simulator.Shared.Models.HCs.MaterialEquipments;
-using Simulator.Shared.Models.HCs.Materials;
-using Simulator.Shared.Models.HCs.MixerPlanneds;
-using Simulator.Shared.Models.HCs.Mixers;
+using QWENShared.DTOS.BackBoneSteps;
+using QWENShared.DTOS.BaseEquipments;
+using QWENShared.DTOS.Conectors;
+using QWENShared.DTOS.MaterialEquipments;
+using QWENShared.DTOS.Materials;
+using QWENShared.DTOS.MixerPlanneds;
+using QWENShared.DTOS.Mixers;
 
 namespace Simulator.Client.HCPages.MixerPlanneds;
 public partial class MixerPlannedDialog
