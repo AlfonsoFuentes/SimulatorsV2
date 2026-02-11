@@ -1,5 +1,5 @@
 ﻿using GeminiSimulator.DesignPatterns;
-using GeminiSimulator.Main;
+using GeminiSimulator.Helpers;
 using GeminiSimulator.Materials;
 using GeminiSimulator.Plans;
 using QWENShared.DTOS.BaseEquipments;
@@ -21,7 +21,7 @@ namespace GeminiSimulator.PlantUnits
         // --- IDENTIDAD ---
         public Guid Id { get; private set; }
         public string Name { get; private set; }
-        public ProccesEquipmentType Type { get; private set; }
+        public ProcessEquipmentType Type { get; private set; }
         public FocusFactory FocusFactory { get; private set; }
 
         // --- CONECTIVIDAD (Topología) ---
@@ -37,6 +37,7 @@ namespace GeminiSimulator.PlantUnits
         // Almacena la capacidad ya procesada (Kg o Kg/s) según lo que le diga el Loader.
         protected Dictionary<ProductDefinition, Amount> _productCapabilities = new();
 
+        public Dictionary<ProductDefinition, Amount> ProductCapabilities => _productCapabilities;
         public List<ProductDefinition> Materials => _productCapabilities.Select(x => x.Key).ToList();
 
         // --- DISPONIBILIDAD ---
@@ -45,7 +46,7 @@ namespace GeminiSimulator.PlantUnits
         public SimulationContext? Context { get; private set; }
 
         public void SetContext(SimulationContext _Context) => Context = _Context;
-        protected PlantUnit( Guid id, string name, ProccesEquipmentType type, FocusFactory focusFactory)
+        protected PlantUnit( Guid id, string name, ProcessEquipmentType type, FocusFactory focusFactory)
         {
             Id = id;
             Name = name;
@@ -127,25 +128,6 @@ namespace GeminiSimulator.PlantUnits
                 if (window.IsInside(time)) return true;
             }
             return false;
-        }
-
-        // Clase auxiliar privada
-        private class PlannedDownTimeWindow
-        {
-            public TimeOnly Start { get; }
-            public TimeOnly End { get; }
-
-            public PlannedDownTimeWindow(TimeSpan start, TimeSpan end)
-            {
-                Start = TimeOnly.FromTimeSpan(start);
-                End = TimeOnly.FromTimeSpan(end);
-            }
-
-            public bool IsInside(TimeOnly time)
-            {
-                if (Start <= End) return time >= Start && time <= End;
-                else return time >= Start || time <= End;
-            }
         }
         // --- CICLO DE VIDA DE LA SIMULACIÓN (Template Methods) ---
 

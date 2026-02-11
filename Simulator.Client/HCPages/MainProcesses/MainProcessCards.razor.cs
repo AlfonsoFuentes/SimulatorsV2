@@ -1,4 +1,6 @@
-﻿using GeminiSimulator.Main;
+﻿using GeminiSimulator.Helpers;
+using GeminiSimulator.Main;
+using GeminiSimulator.NewFilesSimulations.Context;
 using QWENShared.DTOS.MainProcesss;
 using QWENShared.DTOS.SimulationPlanneds;
 using QWENShared.Enums;
@@ -193,7 +195,7 @@ namespace Simulator.Client.HCPages.MainProcesses
                     {
                         Simulation.SetPlanned(SelectedPlanned);
                         _builder.ApplyProductionPlan(SelectedPlanned);
-                        _engine = new SimulationEngine(Context, Context.Scenario!);
+                        _engine = new NewSimulationEngine(Context, Context.Scenario!);
                     }
 
                     SimulationLoading = false;
@@ -207,8 +209,8 @@ namespace Simulator.Client.HCPages.MainProcesses
             }
 
         }
-        SimulationContext Context = new();
-        SimulationBuilder _builder = new SimulationBuilder();
+        NewSimulationContext Context = new();
+        NewSimulationBuilder _builder = new NewSimulationBuilder();
         public List<SimulationPlannedDTO> PlannedItems { get; set; } = new();
 
         async Task GetAllPlanneds(Guid _MainProcessId)
@@ -226,7 +228,7 @@ namespace Simulator.Client.HCPages.MainProcesses
             }
         }
         SimulationPlannedDTO SelectedPlanned { get; set; } = null!;
-        SimulationEngine _engine = null!;
+        NewSimulationEngine _engine = null!;
         async Task SelectPlan(SimulationPlannedDTO planned)
         {
             await Task.Delay(1);
@@ -236,7 +238,7 @@ namespace Simulator.Client.HCPages.MainProcesses
                
                 Showplanned = false;
                 _builder.ApplyProductionPlan(SelectedPlanned);
-                _engine = new SimulationEngine(Context, Context.Scenario!);
+                _engine = new NewSimulationEngine(Context, Context.Scenario!);
             }
 
             StateHasChanged();

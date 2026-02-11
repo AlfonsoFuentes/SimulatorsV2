@@ -9,7 +9,7 @@ namespace QWENShared.DTOS.Operators
     public class OperatorDTO : BaseEquipmentDTO
     {
         
-        public override ProccesEquipmentType EquipmentType { get; set; } = ProccesEquipmentType.Operator;
+        public override ProcessEquipmentType EquipmentType { get; set; } = ProcessEquipmentType.Operator;
 
 
 

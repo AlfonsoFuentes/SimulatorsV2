@@ -1,6 +1,6 @@
 ﻿namespace QWENShared.Enums
 {
-    public enum ProccesEquipmentType
+    public enum ProcessEquipmentType
     {
         None,
         Line,

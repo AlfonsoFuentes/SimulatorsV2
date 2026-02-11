@@ -1,93 +1,148 @@
 ﻿@using GeminiSimulator.DesignPatterns
 @using GeminiSimulator.Main
+@using GeminiSimulator.NewFilesSimulations.Context
 @using GeminiSimulator.PlantUnits
 @using GeminiSimulator.PlantUnits.Lines
 
 @using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
 @using GeminiSimulator.PlantUnits.ManufacturingEquipments.Skids
 @using GeminiSimulator.PlantUnits.Tanks
-<MudGrid Spacing="2" Class="pa-4" Style="background-color: #f8fafd; min-height: 100vh;">
+<MudGrid Spacing="3" Class="mb-6">
 
-    <MudItem sm="3" xs="12">
-        <MudText Typo="Typo.overline" Color="Color.Primary" Class="mb-2 d-block">Raw Materials</MudText>
-        <MudStack Spacing="2">
-            @foreach (var unit in Engine.RawMaterialTanks)
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-3 mb-3" Elevation="0" Style="background-color: transparent;">
+            <MudText Typo="Typo.overline" Color="Color.Primary" Class="mb-2 d-block ml-1">
+                <b>RAW MATERIALS</b>
+            </MudText>
+
+            @if (Engine.RawMaterialTanks != null)
             {
-                <UnitCard Snapshot="GetSnapshot(unit.Id)" />
+                <MudStack Spacing="2">
+                    @foreach (var unit in Engine.RawMaterialTanks)
+                    {
+                        <UnitCard Unit="@unit" />
+                    }
+                </MudStack>
             }
-        </MudStack>
+        </MudPaper>
     </MudItem>
 
-    <MudItem sm="3" xs="12">
-        <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-2 d-block">Manufacturing Systems</MudText>
-        <MudStack Spacing="2">
-            @foreach (var unit in Engine.Manufacture)
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-3 mb-3" Elevation="0" Style="background-color: transparent;">
+            <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-2 d-block ml-1">
+                <b>MANUFACTURING</b>
+            </MudText>
+            @if (Engine.Skids != null)
             {
-                <UnitCard Snapshot="GetSnapshot(unit.Id)" />
+                <MudStack Spacing="2">
+                    @foreach (var unit in Engine.Skids)
+                    {
+                        <UnitCard Unit="@unit" />
+                    }
+                </MudStack>
             }
-        </MudStack>
+            @if (Engine.Mixers != null)
+            {
+                <MudStack Spacing="2">
+                    @foreach (var unit in Engine.Mixers)
+                    {
+                        <UnitCard Unit="@unit" />
+                    }
+                </MudStack>
+            }
+        </MudPaper>
     </MudItem>
 
-    <MudItem sm="6" xs="12">
-        <div class="d-flex justify-space-between px-4">
-            <MudText Typo="Typo.overline">WIP Tanks</MudText>
-            <MudText Typo="Typo.overline">Packaging Lines</MudText>
-        </div>
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-3 mb-3" Elevation="0" Style="background-color: transparent;">
+            <div class="d-flex justify-space-between px-2 mb-2">
+                <MudText Typo="Typo.overline"><b>WIP TANKS</b></MudText>
+                <MudText Typo="Typo.overline"><b>PACKAGING LINES</b></MudText>
+            </div>
+            <MudDivider Class="mb-3" />
 
-        <MudDivider Class="mb-3" />
-
-        <MudStack Spacing="2">
-            @foreach (var line in Engine.WipLinePairList.GroupBy(x => x.LineId).ToList())
+            @if (Engine.WipLinePairList != null)
             {
-                <div class="d-flex align-center gap-2">
+                <MudStack Spacing="3">
+                    @foreach (var lineGroup in Engine.WipLinePairList.GroupBy(x => x.LineId))
+                    {
+                        var lineUnit = Engine.Lines.FirstOrDefault(x => x.Id == lineGroup.Key);
 
-                    <div style="flex: 1;">
-                        <MudStack>
-                            @foreach (var wip in Engine.WipLinePairList.Where(x => x.LineId == line.Key))
-                            {
+                        <MudPaper Elevation="0" Class="pa-2 rounded cool-hover-effect" Style="background-color: rgba(255,255,255,0.6);">
+                            <div class="d-flex align-center gap-2">
 
-                                <UnitCard Snapshot="GetSnapshot(wip.WipId)" />
+                                <div style="flex: 1; max-width: 45%;">
+                                    <MudStack Spacing="2">
+                                        @foreach (var pair in lineGroup)
+                                        {
+                                            var wipUnit = Engine.WipTanks.FirstOrDefault(x => x.Id == pair.WipId);
+                                            if (wipUnit != null)
+                                            {
+                                                <UnitCard Unit="@wipUnit" />
+                                            }
+                                        }
+                                    </MudStack>
+                                </div>
 
-                            }
-                        </MudStack>
-                    </div>
+                                <div class="d-flex flex-column align-center justify-center px-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Default" />
+                                    @if (lineUnit != null && lineUnit.GlobalState.IsOperational)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Success" Class="pulsing-dot mt-1" />
+                                    }
+                                </div>
 
-                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward"
-                             Size="Size.Small"
-                             Style="color: #bdbdbd;" />
-                    <div style="flex: 1;">
-                        <UnitCard Snapshot="GetSnapshot(line.Key)" />
-                    </div>
-                </div>
+                                <div style="flex: 1;">
+                                    @if (lineUnit != null)
+                                    {
+                                        <UnitCard Unit="@lineUnit" />
+                                    }
+                                </div>
+                            </div>
+                        </MudPaper>
+                    }
+                </MudStack>
             }
-            @*      @foreach (var pair in Engine.WipLinePairList)
-            {
-                <div class="d-flex align-center gap-2">
-                    <div style="flex: 1;">
-                        <UnitCard Snapshot="GetSnapshot(pair.WipId)" />
-                    </div>
-
-                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward"
-                             Size="Size.Small"
-                             Style="color: #bdbdbd;" />
-
-                    <div style="flex: 1;">
-                        <UnitCard Snapshot="GetSnapshot(pair.LineId)" />
-                    </div>
-                </div>
-            } *@
-        </MudStack>
+        </MudPaper>
     </MudItem>
+
 </MudGrid>
 
-@code {
-    // Almacenamos el último snapshot recibido del Engine
-    [Parameter] public SimulationEngine Engine { get; set; } = null!;
-    [Parameter] public SimulationSnapshot? CurrentSnapshot { get; set; }
-    private Dictionary<string, ReportField>? GetSnapshot(Guid unitId)
-    {
-        return CurrentSnapshot?.EquipmentData.GetValueOrDefault(unitId);
+<style>
+    .pulsing-dot {
+        animation: pulse-animation 1.5s infinite;
     }
+
+    @@keyframes pulse-animation {
+        0% {
+            opacity: 1;
+            transform: scale(0.8);
+        }
+
+        50% {
+            opacity: 0.5;
+            transform: scale(1.1);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scale(0.8);
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
+}
+
+@code {
+    // // Almacenamos el último snapshot recibido del Engine
+    // [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
+    // [Parameter] public NewSimulationSnapshot? CurrentSnapshot { get; set; }
+    // private Dictionary<string, ReportField>? GetSnapshot(Guid unitId)
+    // {
+    //     return CurrentSnapshot?.EquipmentData.GetValueOrDefault(unitId);
+    // }
 
     // Ahora los métodos que definimos antes usan el parámetro 'Engine'
 

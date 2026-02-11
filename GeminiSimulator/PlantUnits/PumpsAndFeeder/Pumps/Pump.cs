@@ -24,7 +24,7 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps
         public ProcessTank? _sourceTank;
         public Queue<PlantUnit> RequestQueue => _requestQueue;
         public int QueueCount => _requestQueue.Count;
-        public Pump(Guid id, string name, ProccesEquipmentType type, FocusFactory factory, Amount nominalFlow, bool isForWashing)
+        public Pump(Guid id, string name, ProcessEquipmentType type, FocusFactory factory, Amount nominalFlow, bool isForWashing)
             : base(id, name, type, factory)
         {
             NominalFlowRate = nominalFlow;
@@ -32,7 +32,6 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps
         }
 
 
-        public bool IsOwnedBy(PlantUnit unit) => _currentOwner == unit;
 
         public void SetCommandedFlow(double flow, PlantUnit owner)
         {
@@ -57,6 +56,7 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps
             TransitionOutbound(new PumpAvailable(this));
         }
 
+        PumpOutletState? laststate = null!;
         public override void Update()
         {
             // Validar Fuente
@@ -64,9 +64,12 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps
             if (_sourceTank?.OutboundState is TankAvailableState)
             {
                 TransitionInBound(new PumpInletReady(this));
+                if(laststate!=null)
+                TransitionOutbound(laststate!);
             }
             else
             {
+                laststate = OutboundState as PumpOutletState;
                 TransitionInBound(new PumpInletStarved(this));
                 TransitionOutbound(new PumpOutletNotAvailable(this));
             }

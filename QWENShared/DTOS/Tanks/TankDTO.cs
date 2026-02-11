@@ -10,7 +10,7 @@ namespace QWENShared.DTOS.Tanks
     public class TankDTO : BaseEquipmentDTO
     {
        
-        public override ProccesEquipmentType EquipmentType { get; set; } = ProccesEquipmentType.Tank;
+        public override ProcessEquipmentType EquipmentType { get; set; } = ProcessEquipmentType.Tank;
         double _CapacityValue;
         string _CapacityUnitName = MassUnits.KiloGram.Name;
         public double CapacityValue

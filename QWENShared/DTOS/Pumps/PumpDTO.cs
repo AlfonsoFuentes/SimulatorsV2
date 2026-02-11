@@ -9,7 +9,7 @@ namespace QWENShared.DTOS.Pumps
         
 
         public bool IsForWashing {  get; set; }
-        public override ProccesEquipmentType EquipmentType { get; set; } = ProccesEquipmentType.Pump;
+        public override ProcessEquipmentType EquipmentType { get; set; } = ProcessEquipmentType.Pump;
         double _FlowValue;
         string _FlowUnitName = MassFlowUnits.Kg_min.Name;
         public double FlowValue

@@ -135,13 +135,13 @@ namespace Simulator.Client.HCPages.MainProcesses.Process
         {
             return equipment.EquipmentType switch
             {
-                ProccesEquipmentType.Line => "Line",
-                ProccesEquipmentType.Tank => "Tank",
-                ProccesEquipmentType.Pump => "Pump",
-                ProccesEquipmentType.Mixer => "Mixer",
-                ProccesEquipmentType.ContinuousSystem => "SKID",
-                ProccesEquipmentType.Operator => "Operator",
-                ProccesEquipmentType.StreamJoiner => "Stream Joiner", // 👈 NUEVO
+                ProcessEquipmentType.Line => "Line",
+                ProcessEquipmentType.Tank => "Tank",
+                ProcessEquipmentType.Pump => "Pump",
+                ProcessEquipmentType.Mixer => "Mixer",
+                ProcessEquipmentType.ContinuousSystem => "SKID",
+                ProcessEquipmentType.Operator => "Operator",
+                ProcessEquipmentType.StreamJoiner => "Stream Joiner", // 👈 NUEVO
                 _ => equipment.GetType().Name
             };
         }
@@ -545,14 +545,14 @@ namespace Simulator.Client.HCPages.MainProcesses.Process
         {
             bool result = node.Type switch
             {
-                ProccesEquipmentType.Line => await UpdateLine(node.Id),
-                ProccesEquipmentType.Tank => await UpdateTank(node.Id),
-                ProccesEquipmentType.Pump => await UpdatePump(node.Id),
-                ProccesEquipmentType.Mixer => await UpdateMixer(node.Id),
-                ProccesEquipmentType.ContinuousSystem => await UpdateContinuousSystem(node.Id),
-                ProccesEquipmentType.Operator => await UpdateOperator(node.Id),
-                ProccesEquipmentType.StreamJoiner => await UpdateStreamJoiner(node.Id),
-                ProccesEquipmentType.None => false,
+                ProcessEquipmentType.Line => await UpdateLine(node.Id),
+                ProcessEquipmentType.Tank => await UpdateTank(node.Id),
+                ProcessEquipmentType.Pump => await UpdatePump(node.Id),
+                ProcessEquipmentType.Mixer => await UpdateMixer(node.Id),
+                ProcessEquipmentType.ContinuousSystem => await UpdateContinuousSystem(node.Id),
+                ProcessEquipmentType.Operator => await UpdateOperator(node.Id),
+                ProcessEquipmentType.StreamJoiner => await UpdateStreamJoiner(node.Id),
+                ProcessEquipmentType.None => false,
                 _ => false,
             };
             if (result)

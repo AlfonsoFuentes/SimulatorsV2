@@ -18,7 +18,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
             {
                 Id = dto.Id,
                 Name = dto.Name,
-                EquipmentType = ProccesEquipmentType.Tank,
+                EquipmentType = ProcessEquipmentType.Tank,
                 Capacity = dto.Capacity,
                 HiLevel = dto.MaxLevel,
                 LoLevel = dto.MinLevel,
@@ -37,7 +37,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
             {
                 Id = dto.Id,
                 Name = dto.Name,
-                EquipmentType = ProccesEquipmentType.Tank,
+                EquipmentType = ProcessEquipmentType.Tank,
                 Capacity = dto.Capacity,
                 HiLevel = dto.MaxLevel,
                 LoLevel = dto.MinLevel,
@@ -59,7 +59,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Equipments.Tanks
             {
                 Id = dto.Id,
                 Name = dto.Name,
-                EquipmentType = ProccesEquipmentType.Tank,
+                EquipmentType = ProcessEquipmentType.Tank,
                 Capacity = dto.Capacity,
                 HiLevel = dto.MaxLevel,
                 LoLevel = dto.MinLevel,

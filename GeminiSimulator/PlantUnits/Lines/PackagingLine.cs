@@ -1,5 +1,4 @@
 ﻿using GeminiSimulator.DesignPatterns;
-using GeminiSimulator.Plans;
 using GeminiSimulator.PlantUnits.Lines.States;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments;
 using GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps;
@@ -23,6 +22,7 @@ namespace GeminiSimulator.PlantUnits.Lines
     {
         private readonly Dictionary<LineStateCategory, double> _stateAccumulator = new();
 
+        public bool LineIsRunning => _inboundState is LineInletAvailable;
         public Dictionary<LineStateCategory, double>   StateAcumulator=> _stateAccumulator;
         public override Dictionary<string, ReportField> GetReportData()
         {
@@ -64,7 +64,7 @@ namespace GeminiSimulator.PlantUnits.Lines
 
         private List<Guid> _preferredMixers = new();
         // Constructor limpísimo
-        public PackagingLine(Guid id, string name, ProccesEquipmentType type, FocusFactory factory, TimeSpan auCheckInterval)
+        public PackagingLine(Guid id, string name, ProcessEquipmentType type, FocusFactory factory, TimeSpan auCheckInterval)
             : base(id, name, type, factory)
         {
             AuCheckInterval = auCheckInterval;

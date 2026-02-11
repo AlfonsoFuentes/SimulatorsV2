@@ -57,7 +57,9 @@
         }
         else if (Simulation != null)
         {
-            <SelectedProcessTabs FocusFactory=@FocusFactory Engine="@_engine" Simulation="@Simulation" GetAll="SelectAllProcess" MainProcessId="@MainProcessId"></SelectedProcessTabs>
+            <SelectedProcessTabs SimulationDTO="@SimulationDTO"
+                FocusFactory=@FocusFactory Engine="@_engine" Simulation="@Simulation" 
+                GetAll="SelectAllProcess" MainProcessId="@MainProcessId"></SelectedProcessTabs>
         }
 
 

@@ -1,0 +1,162 @@
+﻿@page "/simple-dashboard"
+@using GeminiSimulator.NewFilesSimulations
+@using GeminiSimulator.NewFilesSimulations.Context
+@using GeminiSimulator.NewFilesSimulations.ManufactureEquipments
+@using MudBlazor
+
+
+<div class="d-flex justify-space-between align-center mb-4 px-1">
+    <div>
+        <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight: 700;">
+            🏭 DISPATCHER DASHBOARD
+        </MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Real-time Resource Allocation
+        </MudText>
+    </div>
+
+    <MudChip T="string" Icon="@Icons.Material.Filled.AccessTime" Color="Color.Primary" Variant="Variant.Outlined" Label="true">
+        <span style="font-family: monospace; font-size: 1.1em; font-weight: bold;">
+            @(Engine?.CurrentTime.ToString("HH:mm:ss") ?? "--:--:--")
+        </span>
+    </MudChip>
+</div>
+
+@if (Engine == null)
+{
+    <MudAlert Severity="Severity.Error">Engine is null</MudAlert>
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="6">
+            <MudTable Items="@Engine.Mixers.OrderBy(x => x.MixerWillbeFreeAt)" Dense="true" Hover="true" Bordered="true"
+                      Class="ma-2" Elevation="4">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6" Color="Color.Success">⚙️ Mixers (Supply)</MudText>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Mixer Name</MudTh>
+                    <MudTh>Material</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Level</MudTh>
+                    <MudTh>Wip</MudTh>
+                    <MudTh>BatchTime</MudTh>
+                    <MudTh>Free At</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name">@context.Name</MudTd>
+                    <MudTd DataLabel="Material">@context.CurrentMaterial?.Name</MudTd>
+                    <MudTd DataLabel="Status">@context.OutletState?.StateLabel</MudTd>
+                    <MudTd DataLabel="Level">@($"{context.CurrentLevel.GetValue(MassUnits.KiloGram):F1} kg")</MudTd>
+                    <MudTd DataLabel="Status">@(context.DestinationVessel?.Name ?? string.Empty)</MudTd>
+                    <MudTd>
+                        <span style="font-family: monospace; font-size: 1.2em; font-weight: bold;">
+                            @FormatTime(context.MixerWillbeFreeAt.GetValue(TimeUnits.Second))
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Free At">@context.MixerProjectedFreeTime.ToString("HH:mm:ss")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+        <MudItem xs="6">
+            <MudTable Items="@Engine.WipTanks.OrderBy(x => x.PendingTimeEmptyMassInProcess)" Dense="true" Hover="true" Striped="true" Bordered="true"
+                      Class="ma-2" Elevation="4">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6" Color="Color.Success">🧠 DECISION LOGIC - WIP Tanks</MudText>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Tank</MudTh>
+                    <MudTh>Line</MudTh>
+                    <MudTh>Level</MudTh>
+                    <MudTh>Mass in Process</MudTh>
+                    <MudTh>Total Autonomy</MudTh>
+                    <MudTh>Level Autonomy</MudTh>
+
+                    <MudTh>Assigned</MudTh>
+                    <MudTh>Candidate</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    @* Columna TANK: ID en negrita + Nombre del producto en pequeño *@
+                    <MudTd DataLabel="Tank">
+                        <div>
+                            <MudText Typo="Typo.body2"><b>@context.Name</b></MudText>
+                            <MudText Typo="Typo.caption" Style="color:gray;">@context.CurrentMaterial?.Name</MudText>
+                        </div>
+                    </MudTd>
+
+                    @* Columna LINE: Basada en tu propiedad de línea de producción *@
+                    <MudTd DataLabel="Line">@context.CurrentLineName</MudTd>
+                    <MudTd DataLabel="Mass in Process">@($"{context.CurrentLevel.GetValue(MassUnits.KiloGram):F0}, Kg")</MudTd>
+                    @* Columna MASS IN PROCESS: Formato '0000, Kg' sin decimales *@
+                    <MudTd DataLabel="Mass in Process">@($"{context.MassInProcess.GetValue(MassUnits.KiloGram):F0}, Kg")</MudTd>
+                    @* Columna AUTONOMY: Usando tu lógica actual de formateo de tiempo *@
+                    <MudTd DataLabel="Autonomy">
+                        <span style="font-weight: bold;">
+                            @FormatTime(context.PendingTimeEmptyMassInProcess.GetValue(TimeUnits.Second))
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Autonomy">
+                        <span style="font-weight: bold;">
+                            @FormatTime(context.TimeToEmptyCurrentLevel.GetValue(TimeUnits.Second))
+                        </span>
+                    </MudTd>
+
+
+
+                    @* Columna MIXER ASSIGNED: En azul (Primary) como se ve en la imagen *@
+                    <MudTd DataLabel="Mixer assigned">
+                        <MudText Typo="Typo.body2" Color="Color.Primary">@(context.AssignedMixer?.Name ?? "-")</MudText>
+                    </MudTd>
+
+                    @* Columna BEST MIXER: Mezclador sugerido + tiempo estimado abajo *@
+                    <MudTd DataLabel="Best Mixer">
+                        <div>
+                            <MudText Typo="Typo.body2"><b>@context.BestCandidate</b></MudText>
+
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+
+
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public NewSimulationEngine? Engine { get; set; }
+
+
+    // Lógica para resaltar la fila del MEJOR MIXER en Verde
+    private Func<NewMixer, string> RowStyleFunc => x =>
+    {
+        if (Engine == null || !Engine.Mixers.Any()) return "";
+
+        // Buscamos el mejor candidato actual
+        var winner = Engine.Mixers
+             .Where(m => m.GlobalState.IsOperational)
+             .OrderBy(m => m.MixerWillbeFreeAt)
+             .FirstOrDefault();
+
+        if (x == winner)
+            return "background-color: #e8f5e9; border-left: 5px solid #4caf50;"; // Verde claro
+
+        return "";
+    };
+
+    protected override void OnInitialized()
+    {
+        // El Timer refresca la tabla cada segundo
+
+    }
+
+    private string FormatTime(double seconds)
+    {
+        if (seconds <= 0) return "READY";
+        var t = TimeSpan.FromSeconds(seconds);
+        return $"{(int)t.TotalMinutes:00}:{t.Seconds:00}";
+    }
+
+
+}

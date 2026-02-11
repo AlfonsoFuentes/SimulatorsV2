@@ -34,7 +34,7 @@ namespace GeminiSimulator.PlantUnits.Tanks
         public StorageTank(
             Guid id,
             string name,
-            ProccesEquipmentType type,
+            ProcessEquipmentType type,
             FocusFactory factory,
             Amount physicalCapacity,
             Amount workingCapacity,
@@ -86,6 +86,10 @@ namespace GeminiSimulator.PlantUnits.Tanks
         double PendingTimeToEmptyVesselSeconds =>
             ProductionRatePerSecond == 0 ? 0 : TotalMassInProcess / ProductionRatePerSecond;
 
+        double PendingTimeToEmptyCurrentLevelSeconds =>
+          ProductionRatePerSecond == 0 ? 0 : CurrentLevel / ProductionRatePerSecond;
+        public Amount PendingTimeToCurrentLevel =>
+           new Amount(PendingTimeToEmptyCurrentLevelSeconds, TimeUnits.Second);
         public  Amount PendingTimeToEmptyVessel =>
             new Amount(PendingTimeToEmptyVesselSeconds, TimeUnits.Second);
         public ProductDefinition? CurrentMaterial { get; private set; }
@@ -278,11 +282,11 @@ namespace GeminiSimulator.PlantUnits.Tanks
         {
             base.CheckInitialStatus(InitialDate);
             TransitionInbound(new NormalCapacityState(this));
-            if (IsOnPlannedBreak(InitialDate))
-            {
-                TransitionOutbound(new TankPlannedDowntimeState(this));
-                return;
-            }
+            //if (IsOnPlannedBreak(InitialDate))
+            //{
+            //    TransitionOutbound(new TankPlannedDowntimeState(this));
+            //    return;
+            //}
             if (CurrentLevel < CriticalMinLevel.GetValue(MassUnits.KiloGram))
             {
                 TransitionOutbound(new TankLoLevelState(this));
@@ -304,7 +308,13 @@ namespace GeminiSimulator.PlantUnits.Tanks
             SetOutletFlow(totalOutflow);
 
         }
-
+        public override void Notify()
+        {
+            foreach (var pump in _outletPumps)
+            {
+                pump.Update();
+            }
+        }
     }
     public class InHouseTank : ProcessTank
     {

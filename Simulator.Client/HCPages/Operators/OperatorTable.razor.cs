@@ -4,6 +4,7 @@ using QWENShared.Enums;
 namespace Simulator.Client.HCPages.Operators;
 public partial class OperatorTable
 {
+    [Parameter]
     public List<OperatorDTO> Items { get; set; } = new();
     string nameFilter = string.Empty;
     public Func<OperatorDTO, bool> Criteria => x => x.Name.Contains(nameFilter, StringComparison.InvariantCultureIgnoreCase);
@@ -14,24 +15,14 @@ public partial class OperatorTable
     [Parameter]
     [EditorRequired]
     public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
-    protected override async Task OnParametersSetAsync()
-    {
-        await GetAll();
-    }
-
+    [Parameter]
+    public EventCallback GetAllExternal { get; set; }
     async Task GetAll()
     {
-        var result = await ClientService.GetAll(new OperatorDTO()
-        {
-            MainProcessId = MainProcessId,
-
-
-        });
-        if (result.Succeeded)
-        {
-            Items = result.Data;
-        }
+        await GetAllExternal.InvokeAsync();
     }
+
+   
     public async Task AddNew()
     {
         OperatorDTO response = new()
@@ -54,7 +45,7 @@ public partial class OperatorTable
             await GetAll();
             StateHasChanged();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+      
     }
     async Task Edit(OperatorDTO response)
     {
@@ -74,7 +65,7 @@ public partial class OperatorTable
         {
             await GetAll();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+      
     }
     public async Task Delete(OperatorDTO response)
     {
@@ -104,7 +95,7 @@ public partial class OperatorTable
             }
            
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+      
 
     }
     HashSet<OperatorDTO> SelecteItems = null!;
@@ -137,7 +128,7 @@ public partial class OperatorTable
             }
          
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+     
 
     }
 }

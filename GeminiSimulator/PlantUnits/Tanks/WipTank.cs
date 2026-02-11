@@ -1,6 +1,7 @@
 ﻿using GeminiSimulator.DesignPatterns;
 using GeminiSimulator.Materials;
 using GeminiSimulator.PlantUnits.Lines;
+using GeminiSimulator.PlantUnits.Lines.States;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments.Skids;
 using GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators;
@@ -18,7 +19,7 @@ namespace GeminiSimulator.PlantUnits.Tanks
         public double MassPendingToProduce { get; set; }
 
 
-      
+
 
 
         public void CountersToZero()
@@ -89,6 +90,17 @@ namespace GeminiSimulator.PlantUnits.Tanks
             base.SetOutletFlow(flow);
             currentMasSentToLine += flow;
             MassPendingToSendToLine -= flow;
+            if (Name.Contains("9"))
+            {
+
+            }
+            if (CurrentLine?.InboundState is LineInletAvailable)
+
+            {
+                TotalSeconds++;
+            }
+
+
 
         }
         public override void SetInletFlow(double flow)
@@ -127,14 +139,14 @@ namespace GeminiSimulator.PlantUnits.Tanks
                 data.Add("Product", new ReportField($"{CurrentMaterial.Name}"));
             if (CurrentLine != null)
             {
-                data.Add($"LIne", new ReportField(CurrentLine.Name, "", true));
+                data.Add($"Line", new ReportField(CurrentLine.Name, "", true));
                 data.Add($"Pending mass to send to {CurrentLine.Name}", new ReportField($"{MassPendingToSendToLine:F1} Kg"));
             }
             data.Add($"Pending mass to receive", new ReportField($"{MassPendingToProduce:F1} Kg"));
             data.Add("Mass sent to line", new ReportField($"{currentMasSentToLine:F0}, Kg"));
-            data.Add("Simulation time", new ReportField($"{TotalSeconds / 60:F2}, min"));
+            //data.Add("Simulation time", new ReportField($"{TotalSeconds / 60:F2}, min"));
             data.Add("Mass in Process", new ReportField($"{MassInProcess.GetValue(MassUnits.KiloGram):F0}, Kg"));
-            data.Add("Time to empty vessel", new ReportField($"{PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute):F2}, min"));
+            data.Add("Time to empty vessel", new ReportField($"{PendingTimeToCurrentLevel.GetValue(TimeUnits.Minute):F2}, min"));
             data.Add("Average Outle flow", new ReportField($"{AverageOutleFlow.GetValue(MassFlowUnits.Kg_min):F2}, Kg/min"));
             return data;
         }

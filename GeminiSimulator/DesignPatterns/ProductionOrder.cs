@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnitSystem;
 
-namespace GeminiSimulator.Plans
+namespace GeminiSimulator.DesignPatterns
 {
 
     public class ProductionOrder

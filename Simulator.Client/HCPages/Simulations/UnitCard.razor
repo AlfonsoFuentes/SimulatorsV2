@@ -1,29 +1,42 @@
-﻿@using GeminiSimulator.DesignPatterns
+﻿@using GeminiSimulator.NewFilesSimulations.BaseClasss
+<MudPaper Elevation="3" Class="pa-3 mb-3 transition-all"
+          Style="@($"border-left: 6px solid {Unit.StateColor}; background-color: white; overflow: hidden;")">
+
+    <MudStack AlignItems="AlignItems.Start">
+        <MudText Typo="Typo.subtitle2" Style="font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+            @Unit.Name
+        </MudText>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                 Style="@($"color: {Unit.StateColor}; font-weight: bold;")">
+            @Unit.State
+        </MudChip>
+    </MudStack>
 
 
-<MudPaper Elevation="1" Class="pa-2 mb-2" Style="border-left: 4px solid #555; min-width: 180px;">
-    @if (Snapshot != null)
-    {
-        @foreach (var field in Snapshot)
+    <MudDivider Class="mb-2" />
+
+    <div class="d-flex flex-column gap-1">
+        @foreach (var field in Unit.Report.Where(x => x.Title != "Name" && x.Title != "Status")) // Filtramos lo que ya mostramos arriba
         {
-            if (field.Key == "Header")
+            @if (field.Title.Contains("GLOBAL") || field.Title.Contains("CURRENT"))
             {
-                <MudText Typo="Typo.subtitle2" Style="font-weight: 800; text-transform: uppercase;">
-                    @field.Value.Value
+                <MudText Typo="Typo.caption" Class="mt-2 mb-1" Style="font-weight: 700; color: #9E9E9E; border-bottom: 1px dashed #E0E0E0;">
+                    @field.Title
                 </MudText>
             }
             else
             {
                 <div class="d-flex justify-space-between align-center">
-                    <MudText Typo="Typo.caption" Class="text-secondary">@field.Key</MudText>
-                    <MudText Typo="Typo.body2" Style="@($"color: {field.Value.Color}; font-weight: {(field.Value.IsBold ? "700" : "400")}; font-size: 0.8rem;")">
-                        @field.Value.Value
+                    <MudText Typo="Typo.caption" Style="color: #616161;">@field.Title</MudText>
+                    <MudText Typo="Typo.caption" Style="@($"color: {field.Color}; font-weight: {(field.IsBold ? "700" : "500")}; font-size: 0.85rem;")">
+                        @field.Legend
                     </MudText>
                 </div>
             }
         }
-    }
+    </div>
 </MudPaper>
+
 @code {
-    [Parameter] public Dictionary<string, ReportField>? Snapshot { get; set; }
+    [Parameter] public NewPlantUnit Unit { get; set; } = null!;
 }

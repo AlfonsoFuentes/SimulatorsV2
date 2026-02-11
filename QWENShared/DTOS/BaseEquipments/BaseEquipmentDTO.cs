@@ -23,7 +23,7 @@ namespace QWENShared.DTOS.BaseEquipments
         public Guid MainProcessId { get; set; }
         public bool CopyData { get; set; } = true;
 
-        public virtual ProccesEquipmentType EquipmentType { get; set; } = ProccesEquipmentType.None;
+        public virtual ProcessEquipmentType EquipmentType { get; set; } = ProcessEquipmentType.None;
         public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
 
         public List<MaterialDTO> Materials => MaterialEquipments == null || MaterialEquipments.Count == 0 ? new() : MaterialEquipments.Select(x => x.Material!).ToList();

@@ -51,7 +51,7 @@ namespace Simulator.Server.Databases.Entities.HC
                 case MixerDTO request:
                     {
 
-                        ProccesEquipmentType = ProccesEquipmentType.Mixer;
+                        ProccesEquipmentType = ProcessEquipmentType.Mixer;
                         Name = request.Name;
                         FocusFactory = request.FocusFactory;
 

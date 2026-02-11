@@ -8,7 +8,7 @@ namespace Simulator.Client.HCPages.SimulationPlanneds.ProcessFlowDiagram
     public abstract class EquipmentNodeBase
     {
         public Guid Id => Equipment.Id; 
-        public ProccesEquipmentType Type => Equipment.EquipmentType; 
+        public ProcessEquipmentType Type => Equipment.EquipmentType; 
         public IEquipment Equipment { get; set; } = null!;
         public double X { get; set; }
         public double Y { get; set; }

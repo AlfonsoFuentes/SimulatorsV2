@@ -12,7 +12,7 @@ using GeminiSimulator.SKUs;
 using GeminiSimulator.WashoutMatrixs;
 using UnitSystem;
 
-namespace GeminiSimulator.Main
+namespace GeminiSimulator.Helpers
 {
 
     public class SimulationContext

@@ -4,9 +4,13 @@ using QWENShared.Enums;
 
 namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators
 {
+    public interface IOperatorPlanned
+    {
+
+    }
     public class Operator : PlantUnit
     {
-        public Operator(Guid id, string name, ProccesEquipmentType type, FocusFactory factory)
+        public Operator(Guid id, string name, ProcessEquipmentType type, FocusFactory factory)
             : base(id, name, type, factory)
         {
         }
@@ -14,13 +18,19 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators
         public override void CheckInitialStatus(DateTime InitialDate)
         {
             _currentOwner = null!;
+            if (IsOnPlannedBreak(InitialDate))
+
+            {
+                TransitionInBound(new OperatorAvailablePlanned(this));
+                return;
+            }
             TransitionInBound(new OperatorAvailable(this));
         }
 
         private PlantUnit? _currentOwner;
-        public PlantUnit? CurrentOwner=> _currentOwner;
+        public PlantUnit? CurrentOwner => _currentOwner;
         private Queue<PlantUnit> _requestQueue = new Queue<PlantUnit>();
-        public bool IsOwnedBy(PlantUnit unit) => _currentOwner == unit;
+
         public void RequestAccess(PlantUnit requester)
         {
             if (_currentOwner == requester) return;
@@ -79,7 +89,7 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators
             // Aquí agregarás el caso del Mixer: "|| candidate is Mixer ..."
             return false;
         }
-     
+
         public void TransitionInBound(OperatorState newState) => TransitionInBoundInternal(newState);
     }
     public abstract class OperatorState : IUnitState
@@ -108,6 +118,11 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators
         }
 
         public override string StateName => $"{_operator.Name} Available";
+        public override void CheckTransitions()
+        {
+            if (_operator.IsOnPlannedBreak(_operator.CurrentDate))
+                _operator.TransitionInBound(new OperatorAvailablePlanned(_operator));
+        }
     }
     public class OperatorNotAvailable : OperatorState
     {
@@ -116,5 +131,37 @@ namespace GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators
         }
 
         public override string StateName => $"{_operator.Name} Occupied by {_operator.CurrentOwner?.Name}";
+
+        public override void CheckTransitions()
+        {
+            if (_operator.IsOnPlannedBreak(_operator.CurrentDate))
+                _operator.TransitionInBound(new OperatorNotAvailablePlanned(_operator));
+        }
+    }
+    public class OperatorAvailablePlanned : OperatorState  , IOperatorPlanned
+    {
+        public OperatorAvailablePlanned(Operator _operator) : base(_operator)
+        {
+        }
+
+        public override string StateName => $"{_operator.Name} Planned dowtime";
+        public override void CheckTransitions()
+        {
+            if (_operator.IsOnPlannedBreak(_operator.CurrentDate)) { return; }
+            _operator.TransitionInBound(new OperatorAvailable(_operator));
+        }
+    }
+    public class OperatorNotAvailablePlanned : OperatorState , IOperatorPlanned
+    {
+        public OperatorNotAvailablePlanned(Operator _operator) : base(_operator)
+        {
+        }
+
+        public override string StateName => $"{_operator.Name} Occupied by {_operator.CurrentOwner?.Name}";
+        public override void CheckTransitions()
+        {
+            if (_operator.IsOnPlannedBreak(_operator.CurrentDate)) { return; }
+            _operator.TransitionInBound(new OperatorNotAvailable(_operator));
+        }
     }
 }

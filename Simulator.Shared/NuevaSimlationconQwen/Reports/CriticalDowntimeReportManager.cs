@@ -49,13 +49,13 @@ namespace Simulator.Shared.NuevaSimlationconQwen.Reports
                 );
         }
 
-        private string GetEquipmentCategory(ProccesEquipmentType equipmentType) => equipmentType switch
+        private string GetEquipmentCategory(ProcessEquipmentType equipmentType) => equipmentType switch
         {
-            ProccesEquipmentType.Line => "Lines",
-            ProccesEquipmentType.Mixer or ProccesEquipmentType.ContinuousSystem => "Mixers & Skids",
-            ProccesEquipmentType.Tank => "Tanks",
-            ProccesEquipmentType.Pump => "Pumps",
-            ProccesEquipmentType.Operator => "Operators",
+            ProcessEquipmentType.Line => "Lines",
+            ProcessEquipmentType.Mixer or ProcessEquipmentType.ContinuousSystem => "Mixers & Skids",
+            ProcessEquipmentType.Tank => "Tanks",
+            ProcessEquipmentType.Pump => "Pumps",
+            ProcessEquipmentType.Operator => "Operators",
             _ => "Other"
         };
 

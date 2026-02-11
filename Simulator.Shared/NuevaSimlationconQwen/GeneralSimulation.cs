@@ -81,7 +81,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen
 
                     Id = lineDto.Id,
                     Name = lineDto.Name,
-                    EquipmentType = ProccesEquipmentType.Line
+                    EquipmentType = ProcessEquipmentType.Line
 
 
                 };
@@ -97,7 +97,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen
 
                     Id = streamjoinerdto.Id,
                     Name = streamjoinerdto.Name,
-                    EquipmentType = ProccesEquipmentType.StreamJoiner
+                    EquipmentType = ProcessEquipmentType.StreamJoiner
 
 
                 };
@@ -113,7 +113,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen
                 {
                     Id = pumpDTO.Id,
                     Name = pumpDTO.Name,
-                    EquipmentType = ProccesEquipmentType.Pump,
+                    EquipmentType = ProcessEquipmentType.Pump,
                     Flow = pumpDTO.Flow,
                     IsForWashout = pumpDTO.IsForWashing,
                 };
@@ -278,7 +278,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen
                 {
                     Id = mixerDTO.Id,
                     Name = mixerDTO.Name,
-                    EquipmentType = ProccesEquipmentType.Mixer,
+                    EquipmentType = ProcessEquipmentType.Mixer,
 
 
                 };
@@ -295,7 +295,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen
                 {
                     Id = skidDTO.Id,
                     Name = skidDTO.Name,
-                    EquipmentType = ProccesEquipmentType.ContinuousSystem,
+                    EquipmentType = ProcessEquipmentType.ContinuousSystem,
                     Capacity = skidDTO.Flow
                 };
                 Equipments.Add(skid);
@@ -309,7 +309,7 @@ namespace Simulator.Shared.NuevaSimlationconQwen
                 {
                     Id = operatorDTO.Id,
                     Name = operatorDTO.Name,
-                    EquipmentType = ProccesEquipmentType.Operator,
+                    EquipmentType = ProcessEquipmentType.Operator,
                 };
                 Equipments.Add(oper);
             }

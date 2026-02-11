@@ -1,4 +1,5 @@
-﻿using GeminiSimulator.Materials;
+﻿using GeminiSimulator.Helpers;
+using GeminiSimulator.Materials;
 using GeminiSimulator.PlantUnits.Lines;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers;
 using GeminiSimulator.PlantUnits.Tanks;
@@ -16,7 +17,9 @@ namespace GeminiSimulator.Main
          string TotalStorage,   // <--- EL DATO NUEVO: ¿Por qué no se programó?
          string AssignedMixer,   // <--- EL DATO NUEVO: Nombre exacto del mixer si se asignó
          string StatusColor,     // Para la UI (Success, Warning, Error, Info)
-         bool IsInHouse
+         bool IsInHouse,
+         string BestMixerName,
+         double BestMixerBatchTime
      );
 
     // 2. REGISTRO DE OFERTA (El "Dashboard" del Mixer)
@@ -33,7 +36,7 @@ namespace GeminiSimulator.Main
             ProductDefinition Product,
             double SlackTimeMinutes,
             bool IsInHouse,
-            bool IsUrgent
+            bool IsBatchNeeded
         );
     public class ProductionScheduler
     {
@@ -112,16 +115,17 @@ namespace GeminiSimulator.Main
             // =================================================================
 
             var allNeeds = GatherAllNeeds();
-            var sortedNeeds = allNeeds.OrderBy(n => n.SlackTimeMinutes).ToList();
+            var sortedNeeds = allNeeds.Where(x => x.IsBatchNeeded).OrderBy(n => n.SlackTimeMinutes).ToList();
 
             var logicTrace = new Dictionary<string, (string Reason, BatchMixer? Mixer, string Color)>();
 
             foreach (var need in sortedNeeds)
             {
                 // 1. CÁLCULOS MATEMÁTICOS
-                double virtualLevel = need.Tank.TotalMassInProcess;
-                double capacity = need.Tank.WorkingCapacity.GetValue(MassUnits.KiloGram);
-                double utilization = capacity > 0 ? (virtualLevel / capacity) * 100 : 0;
+
+                if (need.Tank.Name.Contains("9"))
+                {
+                }
                 var bestMixer = FindBestMixerFor(need.Product, need.IsInHouse);
                 // --- CHECK 1: PIPELINE FULL? ---
                 if (bestMixer == null)
@@ -130,8 +134,10 @@ namespace GeminiSimulator.Main
                     continue;
                 }
                 // --- CHECK 4: ASIGNACIÓN EXITOSA ---
-                if (need.IsInHouse) bestMixer.ReceivePriorityRequirementBatch(need.Tank);
-                else bestMixer.ReceiveRequirementBatch(need.Tank);
+                if (need.IsInHouse)
+                    bestMixer.ReceivePriorityRequirementBatch(need.Tank);
+                else
+                    bestMixer.ReceiveRequirementBatch(need.Tank);
 
                 logicTrace[need.Tank.Name] = ("Assigned & Scheduled", bestMixer, "Info");
             }
@@ -154,7 +160,7 @@ namespace GeminiSimulator.Main
                 string reason = "Stable / No Demand";
                 BatchMixer? mixer = mixers.FirstOrDefault(x => x.CurrentWipTank == tank);
                 string color = "Default";
-                double timeToEmpty = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
+                double timeToEmpty = tank.PendingTimeToCurrentLevel.GetValue(TimeUnits.Minute);
 
                 bool isVip = tank is InHouseTank;
 
@@ -162,11 +168,13 @@ namespace GeminiSimulator.Main
                 {
                     var trace = logicTrace[tank.Name];
                     reason = trace.Reason;
-                   
+
                     color = trace.Color;
                 }
-                 string linename=tank is WipTank wipTank && wipTank.CurrentLine != null ? wipTank.CurrentLine.Name : "--";
-
+                string linename = tank is WipTank wipTank && wipTank.CurrentLine != null ? wipTank.CurrentLine.Name : "--";
+                var bestMixer = FindBestMixerFor(tank.CurrentMaterial!, false);
+                double MixerAvailableTime = bestMixer == null ? 0 :
+                    CalculateEstimatedTimeAvailability(bestMixer!, tank.CurrentMaterial!, isVip, bestMixer?.GetCapacity(tank.CurrentMaterial!).GetValue(MassUnits.KiloGram) ?? 0);
                 demandList.Add(new DemandLog(
                     tank.Name,
                     tank.CurrentMaterial?.Name ?? "Empty",
@@ -176,7 +184,9 @@ namespace GeminiSimulator.Main
                     $"{tank.TotalMassInProcess:F0}, Kg",
                     mixer?.Name ?? "--",
                     color,
-                    isVip
+                    isVip,
+                    bestMixer?.Name ?? "", MixerAvailableTime
+
                 ));
             }
 
@@ -210,24 +220,22 @@ namespace GeminiSimulator.Main
 
             var lines = _context.Lines.Values.Where(x => x.CurrentOrder != null && x.CurrentWipTank != null).ToList();
             // A. Analizar WIPs de Líneas (Consumo normal)
+            List<ProcessTank> AllTanks = new();
             foreach (var line in lines)
             {
-                if (line.CurrentWipTank == null || line.CurrentOrder == null) continue;
-
-                // Analizamos el tanque con lógica "Normal" (false)
-                var need = AnalyzeTank(line.CurrentWipTank, line.CurrentOrder.Material!, false);
-                if (need != null) needs.Add(need);
+                AllTanks.Add(line.CurrentWipTank!);
             }
-
-            // B. Analizar Tanques InHouse (Prioridad Crítica)
             foreach (var tank in _context.TanksInHouse)
             {
-                if (tank.CurrentMaterial == null) continue;
-
-                // Analizamos el tanque con lógica "InHouse" (true)
-                var need = AnalyzeTank(tank, tank.CurrentMaterial, true);
+                AllTanks.Add(tank);
+            }
+            AllTanks = AllTanks.OrderBy(x => x.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute)).ToList();
+            foreach (var tank in AllTanks)
+            {
+                var need = AnalyzeTank(tank, tank.CurrentMaterial!, false);
                 if (need != null) needs.Add(need);
             }
+
 
             return needs;
         }
@@ -241,12 +249,17 @@ namespace GeminiSimulator.Main
             // CORRECCIÓN: ESTIMAR EL TAMAÑO REAL DEL LOTE (EL "BALDE")
             // -------------------------------------------------------------
 
+            if (tank.Name.Contains("9"))
+            {
+
+            }
             double timeToEmptyMin = tank.PendingTimeToEmptyVessel.GetValue(TimeUnits.Minute);
             if (timeToEmptyMin == 0) { return null; }//No hay datos que analizar aun no ha corrido la linea asignara basura
             var bestMixer = FindBestMixerFor(product, isInHouse);
             // 1. Buscamos qué mixers pueden hacer este producto para saber el tamaño típico del lote.
 
             if (bestMixer == null) return null;
+
 
             // Si no hay mixers, asumimos algo seguro (ej. 2000kg) o la capacidad del tanque si es pequeño.
             // Esto evita división por cero.
@@ -260,11 +273,15 @@ namespace GeminiSimulator.Main
             double currentLevel = tank.TotalMassInProcess;
             double currentSpace = tank.WorkingCapacity.GetValue(MassUnits.KiloGram) - currentLevel;
 
+            if (currentSpace < 0)
+                return null;
             // 2. ¿Cuánto tardará el mixer en llegar?
             double batchtimme = _ai.PredictBatchDuration(bestMixer, product);
             double dischargeTime = bestMixer.DischargeRate == 0 ? 10000000 : estimatedBatchSize / bestMixer.DischargeRate;
             double estimatedBatchTimeSec = batchtimme + dischargeTime;
-
+            if (tank.Name.Contains("Base"))
+            {
+            }
 
 
             // 3. ¿Cuánto va a consumir la línea mientras cocinamos? (Proyección)
@@ -291,15 +308,17 @@ namespace GeminiSimulator.Main
 
 
 
-            bool isUrgent = isInHouse ? true : slack <= 0;
-            if (!isUrgent) return null;
 
-            return new Need(tank, product, slack, isInHouse, isUrgent);
+            bool IsBatchNeeded = slack <= 0;
+            if (!IsBatchNeeded) return null;
+
+            return new Need(tank, product, slack, isInHouse, IsBatchNeeded);
         }
 
 
         private BatchMixer? FindBestMixerFor(ProductDefinition _product, bool _isInHouse)
         {
+            if (_product == null) return null;
             // 1. Filtrar: Solo mixers que físicamente puedan hacer el producto
             var candidates = _context.Mixers.Values
                 .Where(m => m.CanProcess(_product))
@@ -323,47 +342,17 @@ namespace GeminiSimulator.Main
             // 3. Ganador: El que tenga menor tiempo de espera
             return selectedmixer;
         }
-
-        // --- EL CÁLCULO COMPLEJO DE DISPONIBILIDAD (TU LÓGICA DE ORO) ---
-        private double CalculateEstimatedAvailability(BatchMixer mixer, ProductDefinition productToMake, bool isPriority)
+        private double CalculateEstimatedTimeAvailability(BatchMixer mixer, ProductDefinition productToMake, bool isPriority, double BatchSizeKg)
         {
             double timelineSeconds = 1;
-            double BatchSizeKg = mixer.GetCapacity(productToMake).GetValue(MassUnits.KiloGram);
-
-            // Rastreamos qué producto deja sucio al mixer en cada paso mental
             ProductDefinition? currentContextProduct = mixer.CurrentMaterial ?? mixer.LastMaterialProcessed;
 
             // --- A. ESTADO ACTUAL (Lo que ya está haciendo) ---
             if (mixer.InboundState is not MixerIdle)
             {
+                timelineSeconds += GetMixerMixerPendingBatchTime(mixer);
                 // Si está lavando
-                if (mixer.InboundState is MixerManagingWashing || mixer.InboundState is MixerManagingWashingStarved)
-                {
-                    // Asumimos peor caso: Falta el lavado completo (o podrías poner la mitad)
-                    if (mixer.LastMaterialProcessed != null && mixer.CurrentMaterial != null)
-                    {
-                        var w = _context.WashoutRules.GetMixerWashout(mixer.LastMaterialProcessed.Category, mixer.CurrentMaterial.Category);
-                        timelineSeconds += w.GetValue(TimeUnits.Second);
-                    }
-                }
-                // Si está cocinando (Batching)
-                else if (mixer.InboundState is MixerFillingWithPump || mixer.InboundState is MixerProcessingTime || mixer.InboundState is MixerFillingManual)
-                {
-                    double total = _ai.GetMaxProductTime(mixer.CurrentMaterial!);
-                    double elapsed = mixer.NetBatchTimeInSeconds; // Usamos tu contador
-                    double remaining = total - elapsed;
-                    timelineSeconds += (remaining > 0 ? remaining : 0);
 
-                    // Y falta descargar
-                    if (mixer.DischargeRate > 0)
-                        timelineSeconds += (mixer.Capacity / mixer.DischargeRate);
-                }
-                // Si está descargando
-                else if (mixer.InboundState is MixerDischarging)
-                {
-                    if (mixer.DischargeRate > 0)
-                        timelineSeconds += (mixer.CurrentMass / mixer.DischargeRate);
-                }
             }
 
             // --- B. LA COLA DE ESPERA (Future Simulation) ---
@@ -404,7 +393,7 @@ namespace GeminiSimulator.Main
 
             // --- D. FACTOR OPERARIO (BLOQUEO CRUZADO) ---
             // Si el mixer necesita operario para arrancar Y el operario está ocupado en OTRO lado
-            if (mixer.EngagementType == OperatorEngagementType.StartOnDefinedTime)
+            if (mixer.EngagementType == OperatorEngagementType.StartOnDefinedTime|| mixer.EngagementType == OperatorEngagementType.FullBatch)
             {
                 if (mixer.BatchOperator != null &&
                     mixer.BatchOperator.CurrentOwner != null &&
@@ -413,13 +402,84 @@ namespace GeminiSimulator.Main
                     // Preguntamos al otro equipo cuánto le falta
                     if (mixer.BatchOperator.CurrentOwner is BatchMixer otherMixer)
                     {
-                        // Sumamos el tiempo que le falta al otro para liberar a "Juan"
-                        timelineSeconds += otherMixer.PendingOperatorRealse;
+                        if (mixer.EngagementType == OperatorEngagementType.StartOnDefinedTime)
+                        {
+                            // Sumamos el tiempo que le falta al otro para liberar a "Juan"
+                            timelineSeconds += otherMixer.PendingOperatorRealse;
+                        }
+                        else
+                        {
+                            timelineSeconds += GetMixerMixerPendingBatchTime(otherMixer);
+                        }
                     }
                 }
             }
+            
+
+            return (timelineSeconds / 60.0);
+        }
+        // --- EL CÁLCULO COMPLEJO DE DISPONIBILIDAD (TU LÓGICA DE ORO) ---
+        private double CalculateEstimatedAvailability(BatchMixer mixer, ProductDefinition productToMake, bool isPriority)
+        {
+
+            double BatchSizeKg = mixer.GetCapacity(productToMake).GetValue(MassUnits.KiloGram);
+            double timelineSeconds = CalculateEstimatedTimeAvailability(mixer, productToMake, isPriority, BatchSizeKg);
+
             var result = BatchSizeKg / (timelineSeconds / 60.0);
             return result; // Devolvemos Minutos
+        }
+        public double GetMixerMixerPendingBatchTime(BatchMixer mixer)
+        {
+            double timelineSeconds = 0;
+            double BatchSizeKg = mixer.GetCapacity(mixer.CurrentMaterial).GetValue(MassUnits.KiloGram);
+
+            if(mixer.InboundState is MixerStarvedByAtInitOperator)
+            {
+                if (mixer.LastMaterialProcessed != null && mixer.CurrentMaterial != null)
+                {
+                    var w = _context.WashoutRules.GetMixerWashout(mixer.LastMaterialProcessed.Category, mixer.CurrentMaterial.Category);
+                    timelineSeconds += w.GetValue(TimeUnits.Second);
+                }
+    
+                // Si está esperando operario al inicio, asumimos que falta TODO el batch
+                if (mixer.CurrentMaterial != null)
+                {
+                    double total = _ai.GetMaxProductTime(mixer.CurrentMaterial);
+                    timelineSeconds += total;
+                    // Y falta descargar
+                    if (mixer.DischargeRate > 0)
+                        timelineSeconds += (BatchSizeKg / mixer.DischargeRate);
+                }
+            }
+            else if (mixer.InboundState is MixerManagingWashing || mixer.InboundState is MixerManagingWashingStarved)
+            {
+                // Asumimos peor caso: Falta el lavado completo (o podrías poner la mitad)
+                if (mixer.LastMaterialProcessed != null && mixer.CurrentMaterial != null)
+                {
+                    var w = _context.WashoutRules.GetMixerWashout(mixer.LastMaterialProcessed.Category, mixer.CurrentMaterial.Category);
+                    timelineSeconds += w.GetValue(TimeUnits.Second);
+                }
+            }
+            // Si está cocinando (Batching)
+            else if (mixer.InboundState is MixerFillingWithPump || mixer.InboundState is MixerProcessingTime || mixer.InboundState is MixerFillingManual)
+            {
+                double total = _ai.GetMaxProductTime(mixer.CurrentMaterial!);
+                double elapsed = mixer.NetBatchTimeInSeconds; // Usamos tu contador
+                double remaining = total - elapsed;
+                timelineSeconds += (remaining > 0 ? remaining : 0);
+
+                // Y falta descargar
+                if (mixer.DischargeRate > 0)
+                    timelineSeconds += (BatchSizeKg / mixer.DischargeRate);
+            }
+            // Si está descargando
+            else if (mixer.InboundState is MixerDischarging)
+            {
+                if (mixer.DischargeRate > 0)
+                    timelineSeconds += (mixer.CurrentMass / mixer.DischargeRate);
+            }
+
+            return timelineSeconds;
         }
     }
 }

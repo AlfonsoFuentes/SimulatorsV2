@@ -1,11 +1,12 @@
 ﻿
 @using GeminiSimulator.Main
+@using GeminiSimulator.NewFilesSimulations.Context
 
-<SimulationLayout Engine="Engine" CurrentSnapshot="LatestSnapshot" />
+<SimulationLayout Engine="Engine" />
 
 
 
 @code {
-    [Parameter] public SimulationEngine Engine { get; set; } = null!;
-    [Parameter] public SimulationSnapshot? LatestSnapshot { get; set; } = null!;
+    [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
+    [Parameter] public NewSimulationSnapshot? LatestSnapshot { get; set; } = null!;
 }

@@ -8,7 +8,7 @@ namespace QWENShared.DTOS.StreamJoiners
     {
        
 
-        public override ProccesEquipmentType EquipmentType { get; set; } = ProccesEquipmentType.StreamJoiner;
+        public override ProcessEquipmentType EquipmentType { get; set; } = ProcessEquipmentType.StreamJoiner;
        
 
     }

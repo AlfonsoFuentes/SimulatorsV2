@@ -10,4 +10,8 @@
     <ProjectReference Include="..\QWENShared\QWENShared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="NewFilesSimulations\Equipments\" />
+  </ItemGroup>
+
 </Project>

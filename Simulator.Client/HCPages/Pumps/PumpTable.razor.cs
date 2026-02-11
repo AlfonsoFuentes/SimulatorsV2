@@ -4,6 +4,7 @@ using QWENShared.Enums;
 namespace Simulator.Client.HCPages.Pumps;
 public partial class PumpTable
 {
+    [Parameter]
     public List<PumpDTO> Items { get; set; } = new();
     string nameFilter = string.Empty;
     public Func<PumpDTO, bool> Criteria => x => x.Name.Contains(nameFilter, StringComparison.InvariantCultureIgnoreCase);
@@ -14,23 +15,11 @@ public partial class PumpTable
     [Parameter]
     [EditorRequired]
     public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
-    protected override async Task OnParametersSetAsync()
-    {
-        await GetAll();
-    }
-
+    [Parameter]
+    public EventCallback GetAllExternal { get; set; }
     async Task GetAll()
     {
-        var result = await ClientService.GetAll(new PumpDTO()
-        {
-            MainProcessId = MainProcessId,
-
-
-        });
-        if (result.Succeeded)
-        {
-            Items = result.Data;
-        }
+        await GetAllExternal.InvokeAsync();
     }
     public async Task AddNew()
     {
@@ -54,7 +43,7 @@ public partial class PumpTable
             await GetAll();
             StateHasChanged();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
     }
     async Task Edit(PumpDTO response)
     {
@@ -74,7 +63,7 @@ public partial class PumpTable
         {
             await GetAll();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
     }
     public async Task Delete(PumpDTO response)
     {
@@ -104,7 +93,7 @@ public partial class PumpTable
             }
             
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
 
     }
     HashSet<PumpDTO> SelecteItems = null!;
@@ -137,7 +126,7 @@ public partial class PumpTable
             }
          
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
 
     }
 }

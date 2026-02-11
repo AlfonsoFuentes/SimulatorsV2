@@ -8,7 +8,7 @@ namespace QWENShared.DTOS.ContinuousSystems
     public class ContinuousSystemDTO: BaseEquipmentDTO
     {
         
-        public override ProccesEquipmentType EquipmentType { get; set; } = ProccesEquipmentType.ContinuousSystem;
+        public override ProcessEquipmentType EquipmentType { get; set; } = ProcessEquipmentType.ContinuousSystem;
         double _FlowValue;
         string _FlowUnitName = MassFlowUnits.Kg_hr.Name;
         public double FlowValue

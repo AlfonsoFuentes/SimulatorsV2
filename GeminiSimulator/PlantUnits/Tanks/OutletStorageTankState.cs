@@ -15,6 +15,7 @@ namespace GeminiSimulator.PlantUnits.Tanks
         public virtual void Calculate()
         {
 
+            _tank.TotalSeconds++;
             if (_tank is InHouseTank inHouse)
             {
                 inHouse.CalculateOutleFlows();
@@ -30,11 +31,11 @@ namespace GeminiSimulator.PlantUnits.Tanks
         public override void Calculate() { base.Calculate(); }
         public override void CheckTransitions()
         {
-            if (_tank.IsOnPlannedBreak(_tank.CurrentDate))
-            {
-                _tank.TransitionOutbound(new TankPlannedDowntimeState(_tank));
-                return;
-            }
+            //if (_tank.IsOnPlannedBreak(_tank.CurrentDate))
+            //{
+            //    _tank.TransitionOutbound(new TankPlannedDowntimeState(_tank));
+            //    return;
+            //}
 
             if (_tank.CurrentLevel < _tank.CriticalMinLevel.GetValue(MassUnits.KiloGram))
             {
@@ -54,35 +55,35 @@ namespace GeminiSimulator.PlantUnits.Tanks
 
             if (_tank.CurrentLevel > _tank.CriticalMinLevel.GetValue(MassUnits.KiloGram))
             {
-                if (_tank.IsOnPlannedBreak(_tank.CurrentDate))
-                {
-                    _tank.TransitionOutbound(new TankPlannedDowntimeState(_tank));
-                    return;
-                }
+                //if (_tank.IsOnPlannedBreak(_tank.CurrentDate))
+                //{
+                //    _tank.TransitionOutbound(new TankPlannedDowntimeState(_tank));
+                //    return;
+                //}
                 _tank.TransitionOutbound(new TankAvailableState(_tank));
             }
 
         }
     }
-    public class TankPlannedDowntimeState : OutletStorageTankState
-    {
-        public TankPlannedDowntimeState(ProcessTank tank) : base(tank) { }
-        public override string StateName => "Planned downtime";
-        public override void Calculate() { base.Calculate(); }
-        public override void CheckTransitions()
-        {
+    //public class TankPlannedDowntimeState : OutletStorageTankState
+    //{
+    //    public TankPlannedDowntimeState(ProcessTank tank) : base(tank) { }
+    //    public override string StateName => "Planned downtime";
+    //    public override void Calculate() { base.Calculate(); }
+    //    public override void CheckTransitions()
+    //    {
 
-            if (!_tank.IsOnPlannedBreak(_tank.CurrentDate))
-            {
-                if (_tank.CurrentLevel < _tank.CriticalMinLevel.GetValue(MassUnits.KiloGram))
-                {
-                    _tank.TransitionOutbound(new TankLoLevelState(_tank));
-                    return;
-                }
-                _tank.TransitionOutbound(new TankAvailableState(_tank));
+    //        if (!_tank.IsOnPlannedBreak(_tank.CurrentDate))
+    //        {
+    //            if (_tank.CurrentLevel < _tank.CriticalMinLevel.GetValue(MassUnits.KiloGram))
+    //            {
+    //                _tank.TransitionOutbound(new TankLoLevelState(_tank));
+    //                return;
+    //            }
+    //            _tank.TransitionOutbound(new TankAvailableState(_tank));
 
 
-            }
-        }
-    }
+    //        }
+    //    }
+    //}
 }

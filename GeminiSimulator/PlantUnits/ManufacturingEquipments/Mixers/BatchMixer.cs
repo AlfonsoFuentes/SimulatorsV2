@@ -67,7 +67,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
         public int NetBatchTimeInSeconds { get; set; } = 0;
         public int NetStarvedTimeInSeconds { get; set; } = 0;
         public int TotalBatchTimeInSeconds => NetBatchTimeInSeconds + NetStarvedTimeInSeconds;
-        public BatchMixer(Guid id, string name, ProccesEquipmentType type, FocusFactory factory)
+        public BatchMixer(Guid id, string name, ProcessEquipmentType type, FocusFactory factory)
             : base(id, name, type, factory)
         {
             foreach (MixerStateCategory cat in Enum.GetValues(typeof(MixerStateCategory)))
@@ -200,7 +200,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
             //1. seleccionamos el inicio por como opera el operario
             if (EngagementType == OperatorEngagementType.FullBatch || EngagementType == OperatorEngagementType.StartOnDefinedTime)
             {
-                if (BatchOperator?.InboundState is OperatorNotAvailable)
+                if (BatchOperator?.InboundState is OperatorNotAvailable|| BatchOperator?.InboundState is IOperatorPlanned)
                 {
                     BatchOperator?.RequestAccess(this);  //Como el operario no esta disponible aqui lo pnemos en cola
                     TransitionInBound(new MixerStarvedByAtInitOperator(this));     //en esta caso si el operario esta ocupado con el tanque de al lado se va a esperar que lo desocupe
@@ -239,7 +239,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
                     Console.WriteLine($"[AI LEARNING] Mixer {Name} finished {CurrentMaterial.Name} in {TotalBatchTimeInSeconds}s");
                 }
                 //significa que ya termino el batche libera el operario en el caso 1...
-                if (BatchOperator?.IsOwnedBy(this) ?? true)
+                if (BatchOperator?.CurrentOwner==this)
                 {
                     BatchOperator?.ReleaseAccess(this);
                 }

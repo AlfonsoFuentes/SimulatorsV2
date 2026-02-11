@@ -18,7 +18,7 @@ namespace QWENShared.BaseClases.Equipments
         int TopologicalLevel { get; set; }
         Guid Id { get; set; }
         string Name { get; set; }
-        ProccesEquipmentType EquipmentType { get; set; }
+        ProcessEquipmentType EquipmentType { get; set; }
         IEquipmentState? InletState { get; set; }
         IEquipmentState? OutletState { get; set; }
         List<IEquipment> InletEquipments { get; set; }
@@ -66,7 +66,7 @@ namespace QWENShared.BaseClases.Equipments
         public int TopologicalLevel { get; set; } = int.MaxValue;
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public ProccesEquipmentType EquipmentType { get; set; }
+        public ProcessEquipmentType EquipmentType { get; set; }
         public List<IManufactureFeeder> Feeders => InletEquipments.OfType<IManufactureFeeder>().ToList();
         public List<IEquipment> InletEquipments { get; set; } = new();
         public List<IEquipment> OutletEquipments { get; set; } = new();

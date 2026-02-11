@@ -1,4 +1,6 @@
-﻿using GeminiSimulator.Main;
+﻿using GeminiSimulator.DesignPatterns;
+using GeminiSimulator.Helpers;
+using GeminiSimulator.Main;
 using GeminiSimulator.Materials;
 using GeminiSimulator.PlantUnits.Lines;
 using GeminiSimulator.SKUs;

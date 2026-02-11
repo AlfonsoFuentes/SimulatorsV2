@@ -35,7 +35,7 @@ namespace Simulator.Server.Databases.Entities.HC
                 case OperatorDTO request:
                     {
                        
-                        ProccesEquipmentType = ProccesEquipmentType.Operator;
+                        ProccesEquipmentType = ProcessEquipmentType.Operator;
                         Name = request.Name;
                         FocusFactory = request.FocusFactory;
 

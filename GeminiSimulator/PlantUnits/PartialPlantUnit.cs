@@ -50,7 +50,7 @@ namespace GeminiSimulator.PlantUnits
         public void Calculate(DateTime currentTime)
         {
             CurrentDate = currentTime;
-            TotalSeconds++;
+   
             ExecuteProcess();
             CheckStatus();
             Notify();

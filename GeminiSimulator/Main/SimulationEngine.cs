@@ -1,4 +1,5 @@
 ﻿using GeminiSimulator.DesignPatterns;
+using GeminiSimulator.Helpers;
 using GeminiSimulator.Plans;
 using GeminiSimulator.PlantUnits;
 using GeminiSimulator.PlantUnits.Lines;
@@ -23,7 +24,7 @@ namespace GeminiSimulator.Main
         private List<PlantUnit> _executionOrder = new();
 
         public List<PlantUnit> RawMaterialVessels { get; set; } = new();
-        public List<BatchMixer> Mixers => _executionOrder.OfType<BatchMixer>().Where(x => x.Materials.All(x => x.IsFinishedProduct)).ToList();
+        public List<BatchMixer> Mixers => _executionOrder.OfType<BatchMixer>().Where(x => x.Materials.Any(x => x.IsFinishedProduct)).ToList();
         public List<PlantUnit> WipTanks { get; set; } = new();
         public List<PackagingLine> Lines => _executionOrder.OfType<PackagingLine>().ToList();
         public DateTime CurrentTime { get; private set; }
@@ -45,7 +46,7 @@ namespace GeminiSimulator.Main
 
             // 1. Empezamos por las "Sinks" (las 13 líneas de envasado)
             var lines = _context.AllUnits.Values
-                .Where(u => u.Type == ProccesEquipmentType.Line);
+                .Where(u => u.Type == ProcessEquipmentType.Line);
 
             foreach (var line in lines) queue.Enqueue(line);
 

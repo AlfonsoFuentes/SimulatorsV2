@@ -1,8 +1,10 @@
-﻿using GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps;
+﻿using GeminiSimulator.Helpers;
+using GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps;
 using GeminiSimulator.PlantUnits.Tanks;
 using QWENShared.DTOS.SimulationPlanneds;
 using Simulator.Shared.Simulations;
 using System.Reflection;
+using UnitSystem;
 
 namespace GeminiSimulator.Main
 {
@@ -92,9 +94,10 @@ namespace GeminiSimulator.Main
             foreach (var unit in _context.AllUnits.Values)
             {
                 unit.WireUp(_context.AllUnits);
-                unit.SetContext(_context);  
+                unit.SetContext(_context);
             }
             PropagateCapabilitiesToPumps();
+            PropagateMixerBatchCycletime();
             Console.WriteLine("=== PLANTA CONSTRUIDA EXITOSAMENTE ===");
             return _context;
         }
@@ -115,16 +118,16 @@ namespace GeminiSimulator.Main
                 Console.WriteLine($"[...] Ejecutando {loader.GetType().Name}...");
                 loader.Load(planData);
             }
-            if(planData.OperatorHasNotRestrictionToInitBatch)
+            if (planData.OperatorHasNotRestrictionToInitBatch)
             {
-                               Console.WriteLine("--- Configurando Operadores sin Restricciones de Inicio de Lotes ---");
+                Console.WriteLine("--- Configurando Operadores sin Restricciones de Inicio de Lotes ---");
                 _context.OperatorEngagementType = PlantUnits.ManufacturingEquipments.Mixers.OperatorEngagementType.Infinite;
 
 
             }
             else
             {
-                if(planData.MaxRestrictionTimeValue>0)
+                if (planData.MaxRestrictionTimeValue > 0)
                 {
                     _context.OperatorEngagementType = PlantUnits.ManufacturingEquipments.Mixers.OperatorEngagementType.StartOnDefinedTime;
                     _context.TimeOperatorOcupy = planData.MaxRestrictionTime;
@@ -152,11 +155,48 @@ namespace GeminiSimulator.Main
             {
                 // El TankSpecializer crea la instancia correcta (Tipo 1, 2, 3 o 4)
                 var specialized = TankSpecializer.CreateSpecialized(generic);
-              
+
                 // Llamamos al registro especial que acabamos de crear
                 _context.RegisterUnitTanks(specialized);
 
                 Console.WriteLine($"[Especializador] '{specialized.Name}' clasificado en su lista específica.");
+            }
+        }
+        void PropagateMixerBatchCycletime()
+        {
+
+            foreach (var mixer in _context.Mixers.Values)
+            {
+                foreach (var material in mixer.Materials.Where(x => x.Recipe != null).ToList())
+                {
+                    if (mixer.ProductCapabilities.Any(x => x.Key == material))
+                    {
+                        var batchSize = mixer.ProductCapabilities[material].GetValue(MassUnits.KiloGram);
+
+                        var recipe = material.Recipe;
+                        if (recipe == null) continue;
+                        foreach (var step in recipe.Steps.Where(x => x.IsMaterialAddition).ToList())
+                        {
+                            var ingredientId = step.IngredientId;
+                            var pump = mixer.Inputs.OfType<Pump>().Where(x => x.Materials.Any(m => m.Id == ingredientId)).FirstOrDefault();
+                            if (pump == null)
+                            {
+                                step.SetDuration(new Amount(1, TimeUnits.Second));
+                            }
+                            else
+                            {
+                                var pumpFlow = pump.NominalFlowRate.GetValue(MassFlowUnits.Kg_min); // Asumimos que está en unidades de volumen/tiempo
+                                var mass = step.TargetPercentage / 100 * batchSize;
+                                var durationMinutes = pumpFlow == 0 ? 0 : mass / pumpFlow;
+                                step.SetDuration(new Amount(durationMinutes, TimeUnits.Minute));
+                                step.SetMassTarget(new Amount(mass, MassUnits.KiloGram));
+                            }
+                        }
+                    }
+
+
+                }
+
             }
         }
         void PropagateCapabilitiesToPumps()

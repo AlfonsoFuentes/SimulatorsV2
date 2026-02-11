@@ -16,7 +16,7 @@ namespace Simulator.Client.HCPages.Conectors.InletConnectors
         }
 
         Guid MainProcessId => Model.MainProcessId;
-        ProccesEquipmentType EquipmentType => ToEquipment == null ? ProccesEquipmentType.None : ToEquipment.EquipmentType;
+        ProcessEquipmentType EquipmentType => ToEquipment == null ? ProcessEquipmentType.None : ToEquipment.EquipmentType;
       
         public BaseEquipmentDTO ToEquipment=>Model.To!;
 
@@ -76,23 +76,23 @@ namespace Simulator.Client.HCPages.Conectors.InletConnectors
             {
                 switch (EquipmentType)
                 {
-                    case ProccesEquipmentType.Pump:
+                    case ProcessEquipmentType.Pump:
                         Items = result.Data.Where(x => 
-                        x!.EquipmentType == ProccesEquipmentType.Tank ||
-                        x!.EquipmentType == ProccesEquipmentType.Mixer).ToList();
+                        x!.EquipmentType == ProcessEquipmentType.Tank ||
+                        x!.EquipmentType == ProcessEquipmentType.Mixer).ToList();
                         break;
-                    case ProccesEquipmentType.Mixer:
-                        Items = result.Data.Where(x => x!.EquipmentType == ProccesEquipmentType.Pump || x.EquipmentType == ProccesEquipmentType.Operator).ToList();
+                    case ProcessEquipmentType.Mixer:
+                        Items = result.Data.Where(x => x!.EquipmentType == ProcessEquipmentType.Pump || x.EquipmentType == ProcessEquipmentType.Operator).ToList();
                         break;
-                    case ProccesEquipmentType.Tank:
-                    case ProccesEquipmentType.Line:
-                        Items = result.Data.Where(x => x!.EquipmentType == ProccesEquipmentType.Pump).ToList();
+                    case ProcessEquipmentType.Tank:
+                    case ProcessEquipmentType.Line:
+                        Items = result.Data.Where(x => x!.EquipmentType == ProcessEquipmentType.Pump).ToList();
                         break;
-                    case ProccesEquipmentType.StreamJoiner:
-                        Items = result.Data.Where(x => x!.EquipmentType == ProccesEquipmentType.Pump).ToList();
+                    case ProcessEquipmentType.StreamJoiner:
+                        Items = result.Data.Where(x => x!.EquipmentType == ProcessEquipmentType.Pump).ToList();
                         break;
                     default:
-                        Items = result.Data.Where(x => x!.EquipmentType == ProccesEquipmentType.Pump).ToList();
+                        Items = result.Data.Where(x => x!.EquipmentType == ProcessEquipmentType.Pump).ToList();
                         break;
 
                 }

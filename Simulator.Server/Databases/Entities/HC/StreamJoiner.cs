@@ -39,7 +39,7 @@ namespace Simulator.Server.Databases.Entities.HC
                 case StreamJoinerDTO request:
                     {
                        
-                        ProccesEquipmentType = ProccesEquipmentType.StreamJoiner;
+                        ProccesEquipmentType = ProcessEquipmentType.StreamJoiner;
                         Name = request.Name;
                         FocusFactory = request.FocusFactory;
 

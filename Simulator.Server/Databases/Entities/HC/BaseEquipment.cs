@@ -10,7 +10,7 @@ namespace Simulator.Server.Databases.Entities.HC
     public abstract class BaseEquipment : Entity, IMapper     ,IQueryHandler<BaseEquipment>
     {
         public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
-        public ProccesEquipmentType ProccesEquipmentType { get; set; } = ProccesEquipmentType.None;
+        public ProcessEquipmentType ProccesEquipmentType { get; set; } = ProcessEquipmentType.None;
         public int X { get; set; }
         public int Y { get; set; }
         public string Name { get; set; } = string.Empty;

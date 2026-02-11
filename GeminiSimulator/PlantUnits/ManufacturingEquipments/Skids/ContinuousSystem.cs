@@ -36,7 +36,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Skids
         private List<Operator> _seseionOperator = new();
         public double CurrentFlowRate { get; private set; }
 
-        public ContinuousSystem(Guid id, string name, ProccesEquipmentType type, FocusFactory factory, Amount nominalFlow)
+        public ContinuousSystem(Guid id, string name, ProcessEquipmentType type, FocusFactory factory, Amount nominalFlow)
             : base(id, name, type, factory)
         {
             NominalFlowRate = nominalFlow.GetValue(MassFlowUnits.Kg_sg);
@@ -131,7 +131,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Skids
             foreach (var pump in _sessionPumps) pump.RequestAccess(this);
 
             // 2. VERIFICAR PERMISOS
-            bool resourcesGranted = _sessionPumps.All(p => p.IsOwnedBy(this));
+            bool resourcesGranted = _sessionPumps.All(p => p.CurrentOwner==this);
             if (!resourcesGranted)
             {
                 if (!(_inboundState is SkidWaitingForResources))

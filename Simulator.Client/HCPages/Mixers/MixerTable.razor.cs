@@ -4,6 +4,7 @@ using QWENShared.Enums;
 namespace Simulator.Client.HCPages.Mixers;
 public partial class MixerTable
 {
+    [Parameter]
     public List<MixerDTO> Items { get; set; } = new();
     string nameFilter = string.Empty;
     public Func<MixerDTO, bool> Criteria => x => x.Name.Contains(nameFilter, StringComparison.InvariantCultureIgnoreCase);
@@ -14,24 +15,13 @@ public partial class MixerTable
     [Parameter]
     [EditorRequired]
     public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
-    protected override async Task OnParametersSetAsync()
-    {
-        await GetAll();
-    }
-
+    [Parameter]
+    public EventCallback GetAllExternal { get; set; }
     async Task GetAll()
     {
-        var result = await ClientService.GetAll(new MixerDTO()
-        {
-            MainProcessId = MainProcessId,
-
-
-        });
-        if (result.Succeeded)
-        {
-            Items = result.Data;
-        }
+        await GetAllExternal.InvokeAsync();
     }
+
     public async Task AddNew()
     {
         MixerDTO response = new()
@@ -54,7 +44,7 @@ public partial class MixerTable
             await GetAll();
             StateHasChanged();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
     }
     async Task Edit(MixerDTO response)
     {
@@ -74,7 +64,7 @@ public partial class MixerTable
         {
             await GetAll();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+    
     }
     public async Task Delete(MixerDTO response)
     {
@@ -104,7 +94,7 @@ public partial class MixerTable
             }
           
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+ 
 
     }
     HashSet<MixerDTO> SelecteItems = null!;
@@ -137,7 +127,7 @@ public partial class MixerTable
             }
             
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
 
     }
 }

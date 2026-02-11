@@ -1,6 +1,127 @@
 ﻿@using GeminiSimulator.Main
+@using GeminiSimulator.NewFilesSimulations.Context
 @implements IDisposable
+@if (Engine != null)
+{
+    <div style="width: 100%;" class="d-none d-md-flex my-2">
+        @* Pasamos el SpeedFactor para ajustar la velocidad de los motores *@
+        <ConveyorAnimation />
+    </div>
+    <MudContainer MaxWidth="MaxWidth.False" Class="mt-4 px-4">
+        <MudPaper Elevation="4" Class="pa-4 mb-6 rounded-xl" Style="background: linear-gradient(145deg, #ffffff, #f0f0f0);">
+            <MudGrid Justify="Justify.Center">
 
+                <MudItem xs="12" md="4" Class="d-flex flex-column align-center align-md-start">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-weight: 600;">SIMULATION TIME</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-family: 'Roboto Mono', monospace; font-weight: 700; letter-spacing: -1px;">
+                        @_displayTime.ToString("HH:mm:ss")
+                    </MudText>
+                    <MudText Typo="Typo.caption">@_displayTime.ToString("dd MMM yyyy")</MudText>
+                </MudItem>
+
+                <MudItem xs="12" md="4" Class="d-flex justify-center gap-4">
+                    @if (Engine.Status == EngineStatus.Stopped)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.PlayCircle" Color="Color.Success" Size="Size.Large" OnClick="StartSimulation" />
+                    }
+                    else
+                    {
+                        <MudIconButton Icon="@(Engine.Status == EngineStatus.Paused ? Icons.Material.Filled.PlayCircle : Icons.Material.Filled.PauseCircle)"
+                                       Color="Color.Warning" Size="Size.Large" OnClick="TogglePause" />
+
+                        <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Color="Color.Error" Size="Size.Large" OnClick="StopSimulation" />
+                    }
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: rgba(33, 150, 243, 0.05);">
+                        <div class="d-flex justify-space-between mb-1">
+                            <div class="d-flex align-center gap-1">
+                                <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Info" />
+                                <MudText Typo="Typo.caption" Style="font-weight: 700;">ACCELERATION</MudText>
+                            </div>
+                            <MudText Typo="Typo.caption" Color="Color.Info"><b>@Engine.SpeedFactor.ToString("0")x</b></MudText>
+                        </div>
+                        <MudSlider @bind-Value="Engine.SpeedFactor" Min="1" Max="100" Color="Color.Info" Step="5" Size="Size.Small" />
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+       
+        <MudTabs KeepPanelsAlive="true">
+            <MudTabPanel Text="Layout">
+                <SimulationLayout Engine="@Engine" />
+            </MudTabPanel>
+            <MudTabPanel Text="Scheduler">
+                <SimulationDashboard2 Engine="@Engine" />
+            </MudTabPanel>
+            <MudTabPanel Text="Starved Report">
+                <MixerPumpReport Engine="@Engine"></MixerPumpReport>
+            </MudTabPanel>
+        </MudTabs>
+
+
+    </MudContainer>
+}
+else
+{
+    <MudAlert Severity="Severity.Warning">Engine not initialized. Please select a scenario.</MudAlert>
+}
+
+@code {
+    [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
+
+    private DateTime _displayTime;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnInitialized()
+    {
+        if (Engine != null)
+        {
+            // Conectamos el motor con la UI
+            Engine.UpdateModel = UpdateUI;
+            _displayTime = Engine.CurrentTime;
+        }
+    }
+
+    // Este método se llama miles de veces, debe ser ligero.
+    private async Task UpdateUI()
+    {
+        // Dejamos respirar al hilo de UI
+        await Task.Yield();
+
+        _displayTime = Engine.CurrentTime;
+
+        // ¡MAGIA! Esto fuerza a todos los hijos (UnitCard) a leer los nuevos valores
+        StateHasChanged();
+    }
+
+    private async Task StartSimulation()
+    {
+        _cts = new CancellationTokenSource();
+        // Fire and forget (no usamos await para no bloquear el botón)
+        _ = Engine.RunAsync(_cts);
+    }
+
+    private void StopSimulation()
+    {
+        Engine.Stop();
+        _cts?.Cancel();
+    }
+
+    private void TogglePause()
+    {
+        if (Engine.Status == EngineStatus.Running) Engine.Pause();
+        else Engine.Resume();
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        Engine?.Stop();
+    }
+}
+@* 
 @if (Engine != null)
 {
     <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
@@ -40,10 +161,10 @@
         </MudPaper>
 
         <MudTabs KeepPanelsAlive="true">
-            <MudTabPanel Text="Simulation">
+              <MudTabPanel Text="Simulation">
                 <SimulationLayout Engine="@Engine" CurrentSnapshot="@LatestSnapshot"></SimulationLayout>
             </MudTabPanel>
-            <MudTabPanel Text="Scheduler">
+          @*  <MudTabPanel Text="Scheduler">
                 <SchedulerDashBoard Engine="@Engine" Scheduler="@Scheduler" />
             </MudTabPanel>
             <MudTabPanel Text="Mixer metrics">
@@ -51,88 +172,88 @@
             </MudTabPanel>
             <MudTabPanel Text="Line metrics">
                 <LineMetrixDashBoard Engine="@Engine"></LineMetrixDashBoard>
-            </MudTabPanel>
+            </MudTabPanel> 
         </MudTabs>
     </MudContainer>
 }
 else
 {
     <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight: 700;">Must select production plan</MudText>
-}
+} *@
 
 @code {
-    [Parameter] public SimulationEngine Engine { get; set; } = null!;
+    // [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
 
-    // Variables de estado para la UI
-    private DateTime _displayTime;
-    private SimulationSnapshot? LatestSnapshot;
-    private ProductionScheduler? Scheduler;
+    // // Variables de estado para la UI
+    // private DateTime _displayTime;
+    // private NewSimulationSnapshot? LatestSnapshot;
+    // private ManufactureScheduler? Scheduler;
 
-    // Control de Hilos
-    private CancellationTokenSource? _cts;
-
-
-
-    override protected void OnInitialized()
-    {
-
-
-    }
-    async Task UpdateSimulation()
-    {
-
-        await Task.Delay(1);
-        _displayTime = Engine.CurrentTime;
-        LatestSnapshot = Engine.CurrentSnapshot;
-        Scheduler = Engine.Scheduler;
-        StateHasChanged();
-    }
-    protected override void OnParametersSet()
-    {
-        // Inicialización visual inicial
-        if (Engine != null)
-        {
-
-
-            Engine.UpdateModel = UpdateSimulation;
-        }
-    }
-
-    private async Task StartSimulation()
-    {
-        if (Engine == null) return;
-
-        // 1. Iniciar token de cancelación para el Engine
-        _cts = new CancellationTokenSource();
-
-        // 2. ARRANCAR ENGINE (Fire and Forget seguro)
-        // No usamos await aquí para no bloquear la UI. El Engine corre en su Task.
-        // Usamos un Progress vacío o nulo si tu Engine lo permite, para no saturar.
-
-
-        await Engine.RunAsync(_cts);
-
-
-    }
+    // // Control de Hilos
+    // private CancellationTokenSource? _cts;
 
 
 
-    private void StopSimulation()
-    {
-        Engine?.Stop();
-        _cts?.Cancel();
+    // override protected void OnInitialized()
+    // {
 
-    }
 
-    private void TogglePause()
-    {
-        if (Engine.Status == EngineStatus.Running) Engine.Pause();
-        else Engine.Resume();
-    }
+    // }
+    // async Task UpdateSimulation()
+    // {
 
-    public void Dispose()
-    {
-        _cts?.Cancel();
+    //     await Task.Delay(1);
+    //     _displayTime = Engine.CurrentTime;
+    //     LatestSnapshot = Engine.CurrentSnapshot;
+    //     Scheduler = Engine.Scheduler;
+    //     StateHasChanged();
+    // }
+    // protected override void OnParametersSet()
+    // {
+    //     // Inicialización visual inicial
+    //     if (Engine != null)
+    //     {
 
-    }
+
+    //         Engine.UpdateModel = UpdateSimulation;
+    //     }
+    // }
+
+    // private async Task StartSimulation()
+    // {
+    //     if (Engine == null) return;
+
+    //     // 1. Iniciar token de cancelación para el Engine
+    //     _cts = new CancellationTokenSource();
+
+    //     // 2. ARRANCAR ENGINE (Fire and Forget seguro)
+    //     // No usamos await aquí para no bloquear la UI. El Engine corre en su Task.
+    //     // Usamos un Progress vacío o nulo si tu Engine lo permite, para no saturar.
+
+
+    //     await Engine.RunAsync(_cts);
+
+
+    // }
+
+
+
+    // private void StopSimulation()
+    // {
+    //     Engine?.Stop();
+    //     _cts?.Cancel();
+
+    // }
+
+    // private void TogglePause()
+    // {
+    //     if (Engine.Status == EngineStatus.Running) Engine.Pause();
+    //     else Engine.Resume();
+    // }
+
+    // public void Dispose()
+    // {
+    //     _cts?.Cancel();
+
+    // }
 }

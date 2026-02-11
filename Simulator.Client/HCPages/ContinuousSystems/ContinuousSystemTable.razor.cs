@@ -4,6 +4,7 @@ using QWENShared.Enums;
 namespace Simulator.Client.HCPages.ContinuousSystems;
 public partial class ContinuousSystemTable
 {
+    [Parameter]
     public List<ContinuousSystemDTO> Items { get; set; } = new();
     string nameFilter = string.Empty;
     public Func<ContinuousSystemDTO, bool> Criteria => x => x.Name.Contains(nameFilter, StringComparison.InvariantCultureIgnoreCase);
@@ -14,23 +15,11 @@ public partial class ContinuousSystemTable
     [Parameter]
     [EditorRequired]
     public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
-    protected override async Task OnParametersSetAsync()
-    {
-        await GetAll();
-    }
-
+    [Parameter]
+    public EventCallback GetAllExternal { get; set; }
     async Task GetAll()
     {
-        var result = await ClientService.GetAll(new ContinuousSystemDTO()
-        {
-            MainProcessId = MainProcessId,
-
-
-        });
-        if (result.Succeeded)
-        {
-            Items = result.Data;
-        }
+        await GetAllExternal.InvokeAsync();
     }
     public async Task AddNew()
     {
@@ -54,7 +43,7 @@ public partial class ContinuousSystemTable
             await GetAll();
             StateHasChanged();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
     }
     async Task Edit(ContinuousSystemDTO response)
     {
@@ -74,7 +63,7 @@ public partial class ContinuousSystemTable
         {
             await GetAll();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
     }
     public async Task Delete(ContinuousSystemDTO response)
     {
@@ -104,7 +93,7 @@ public partial class ContinuousSystemTable
             }
            
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
 
     }
     HashSet<ContinuousSystemDTO> SelecteItems = null!;
@@ -137,7 +126,7 @@ public partial class ContinuousSystemTable
             }
            
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+  
 
     }
 }

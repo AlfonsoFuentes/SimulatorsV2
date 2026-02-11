@@ -549,8 +549,8 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
 {
     public enum OperatorEngagementType
     {
-           Infinite,           // Opción 1: Siempre disponible
-           FullBatch,          // Opción 2: Se toma al inicio y se suelta al final
-           StartOnDefinedTime  // Opción 4: Se libera tras un tiempo fijo definido en BD
-}
+        Infinite,           // Opción 1: Siempre disponible
+        FullBatch,          // Opción 2: Se toma al inicio y se suelta al final
+        StartOnDefinedTime  // Opción 4: Se libera tras un tiempo fijo definido en BD
+    }
 }

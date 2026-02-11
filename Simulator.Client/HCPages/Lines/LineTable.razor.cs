@@ -4,6 +4,7 @@ using QWENShared.Enums;
 namespace Simulator.Client.HCPages.Lines;
 public partial class LineTable
 {
+    [Parameter]
     public List<LineDTO> Items { get; set; } = new();
     string nameFilter = string.Empty;
     public Func<LineDTO, bool> Criteria => x => x.Name.Contains(nameFilter, StringComparison.InvariantCultureIgnoreCase);
@@ -14,26 +15,11 @@ public partial class LineTable
     [Parameter]
     [EditorRequired]
     public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
-    protected override async Task OnParametersSetAsync()
-    {
-        await GetAll();
-    }
-
+    [Parameter]
+    public EventCallback GetAllExternal { get; set; }
     async Task GetAll()
     {
-        var result = await ClientService.GetAll(new LineDTO()
-        {
-
-       
-            MainProcessId = MainProcessId,
-
-
-        });
-        if (result.Succeeded)
-        {
-            Items = result.Data;
-
-        }
+        await GetAllExternal.InvokeAsync();
     }
     public async Task AddNew()
     {
@@ -57,7 +43,7 @@ public partial class LineTable
             await GetAll();
             StateHasChanged();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+       
     }
     async Task Edit(LineDTO response)
     {
@@ -77,7 +63,7 @@ public partial class LineTable
         {
             await GetAll();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+       
     }
     public async Task Delete(LineDTO response)
     {
@@ -107,7 +93,7 @@ public partial class LineTable
             }
            
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+       
     }
     HashSet<LineDTO> SelecteItems = null!;
     public async Task DeleteGroup()
@@ -139,7 +125,6 @@ public partial class LineTable
             }
            
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
-
+      
     }
 }

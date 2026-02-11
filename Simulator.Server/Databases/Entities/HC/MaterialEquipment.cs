@@ -98,7 +98,15 @@ namespace Simulator.Server.Databases.Entities.HC
         {
             if (dto is MaterialEquipmentDTO material)
             {
-                return x => x.MainProcessId == material.MainProcessId ;
+                if(material.ProccesEquipmentId != Guid.Empty)
+                {
+                    return x => x.ProccesEquipmentId == material.ProccesEquipmentId;
+                }
+                if (material.MainProcessId != Guid.Empty)
+                {
+                    return x => x.MainProcessId == material.MainProcessId;
+                }
+          
             }
             return null!;
 

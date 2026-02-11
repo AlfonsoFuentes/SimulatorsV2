@@ -1,4 +1,5 @@
-﻿using QWENShared.DTOS.BackBoneSteps;
+﻿using GeminiSimulator.NewFilesSimulations.ManufactureEquipments;
+using QWENShared.DTOS.BackBoneSteps;
 using QWENShared.DTOS.Materials;
 using QWENShared.Enums;
 using System;
@@ -40,13 +41,7 @@ namespace GeminiSimulator.Materials
         }
 
         // Método para asignar la receta (Patrón Builder/Setter)
-        public void SetRecipe(List<RecipeStep> steps)
-        {
-            if (steps != null && steps.Any())
-            {
-                Recipe = new RecipeDefinition(steps);
-            }
-        }
+      
 
         // --- LÓGICA DE CLASIFICACIÓN ---
 
@@ -57,6 +52,21 @@ namespace GeminiSimulator.Materials
         public bool IsIntermediate => IsManufactured && Type == MaterialType.RawMaterialBackBone;
 
         public bool IsFinishedProduct => IsManufactured && Type == MaterialType.ProductBackBone;
+        public List<RecipeStep> RecipeSteps { get; private set; } = new();
+
+        // --- LA MATRIZ DE TIEMPOS CON UNIDADES ---
+        // Obligamos a que el valor sea un Amount (ej: 3600 seg o 1 hora)
+        public Dictionary<NewMixer, Amount> TheoreticalBatchTimesPerMixer { get; private set; } = new();
+
+        // Registro usando la clase de unidades
+        public void RegisterTheoreticalTime(NewMixer mixer, Amount totalTime)
+        {
+            TheoreticalBatchTimesPerMixer[mixer] = totalTime;
+        }
+        public void SetRecipe(List<RecipeStep> steps)
+        {
+            RecipeSteps = steps?.OrderBy(x => x.Order).ToList() ?? new List<RecipeStep>();
+        }
     }
     public class RecipeDefinition
     {
@@ -66,7 +76,7 @@ namespace GeminiSimulator.Materials
         {
             // Asignamos la lista directamente.
             // Se asume que el Loader ya la ordenó, pero por seguridad podríamos ordenar aquí también.
-            Steps = steps ?? new List<RecipeStep>();
+            Steps = steps?.OrderBy(x => x.Order).ToList() ?? new List<RecipeStep>();
         }
     }
     public class RecipeStep
@@ -80,12 +90,21 @@ namespace GeminiSimulator.Materials
         // Cantidad objetivo (% del tamaño del batch)
         public double TargetPercentage { get; private set; }
 
-        // Tiempo fijo
+        public void SetDuration(Amount duration)
+        {
+            Duration = duration;
+        }
         public Amount Duration { get; private set; }
+        public Amount MassTarget { get; private set; } = null!;
+        public void SetMassTarget(Amount massTarget)
+        {
+            MassTarget = massTarget;
+        }
+
         public string IngredientName { get; private set; }
 
         // CONSTRUCTOR LIMPIO
-        public RecipeStep(int order, BackBoneStepType type, Guid? ingredientId, double percentage, Amount duration, string name)
+        public RecipeStep(int order, BackBoneStepType type, Guid? ingredientId, double percentage, Amount duration,  string name)
         {
             Order = order;
             OperationType = type;
@@ -93,6 +112,7 @@ namespace GeminiSimulator.Materials
             TargetPercentage = percentage;
             Duration = duration;
             IngredientName = name;
+          
         }
 
         public bool IsMaterialAddition => IngredientId != null && IngredientId != Guid.Empty && TargetPercentage > 0;

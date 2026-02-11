@@ -39,7 +39,7 @@ namespace Simulator.Server.Databases.Entities.HC
                     {
                         FlowValue = request.FlowValue;
                         FlowUnit = request.FlowUnitName;
-                        ProccesEquipmentType = ProccesEquipmentType.ContinuousSystem;
+                        ProccesEquipmentType = ProcessEquipmentType.ContinuousSystem;
                         Name = request.Name;
                         FocusFactory = request.FocusFactory;
 

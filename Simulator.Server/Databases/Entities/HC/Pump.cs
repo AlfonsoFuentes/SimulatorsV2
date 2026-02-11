@@ -45,7 +45,7 @@ namespace Simulator.Server.Databases.Entities.HC
                         FlowUnit = request.FlowUnitName;
                         IsForWashing = request.IsForWashing;
                         Name = request.Name;
-                        ProccesEquipmentType = ProccesEquipmentType.Pump;
+                        ProccesEquipmentType = ProcessEquipmentType.Pump;
                         Name = request.Name;
                         FocusFactory = request.FocusFactory;
 

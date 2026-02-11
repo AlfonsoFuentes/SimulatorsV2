@@ -8,7 +8,7 @@ namespace QWENShared.DTOS.Mixers
     public class MixerDTO: BaseEquipmentDTO
     {
        
-        public override ProccesEquipmentType EquipmentType { get; set; } = ProccesEquipmentType.Mixer;
+        public override ProcessEquipmentType EquipmentType { get; set; } = ProcessEquipmentType.Mixer;
 
     }
     //public class DeleteMixerRequest : DeleteMessageResponse, IRequest

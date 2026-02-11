@@ -1,4 +1,5 @@
 ﻿using GeminiSimulator.DesignPatterns;
+using GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators;
 using GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps;
 using GeminiSimulator.PlantUnits.Tanks;
 using UnitSystem;
@@ -58,8 +59,9 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
         }
         public override void CheckTransitions()
         {
+            if (_mixer.BatchOperator?.InboundState is IOperatorPlanned) return;
 
-            if (_mixer.BatchOperator?.IsOwnedBy(_mixer) ?? true)  //Si da true es porque el operario recibio release y sigue el siguiente paso que es intentar lavar
+            if (_mixer.BatchOperator?.CurrentOwner == _mixer )  //Si da true es porque el operario recibio release y sigue el siguiente paso que es intentar lavar
             {
 
                 if (_mixer.NeedsWashing())
@@ -129,13 +131,13 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
         public override string SubStateName => $"Washing pump in use by: {_mixer.WashingPump?.CurrentOwner?.Name ?? string.Empty}";
         public override void Calculate()
         {
-  
+
             _mixer.NetStarvedTimeInSeconds++;
             _mixer.AccumulateTime(MixerStateCategory.StarvedByWashoutPump);
         }
         public override void CheckTransitions()
         {
-            if (_mixer.WashingPump?.IsOwnedBy(_mixer) ?? true)
+            if (_mixer.WashingPump?.CurrentOwner == _mixer)
             {
                 _mixer.TransitionInBound(new MixerManagingWashing(_mixer));
 
@@ -214,7 +216,7 @@ namespace GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers
         }
         public override void CheckTransitions()
         {
-            if (_mixer.CurrentFillingPump?.IsOwnedBy(_mixer) ?? true)
+            if (_mixer.CurrentFillingPump?.CurrentOwner == _mixer)
             {
                 _mixer.TransitionInBound(new MixerFillingWithPump(_mixer));
             }

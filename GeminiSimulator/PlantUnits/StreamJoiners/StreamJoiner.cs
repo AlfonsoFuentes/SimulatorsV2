@@ -5,7 +5,7 @@ namespace GeminiSimulator.PlantUnits.StreamJoiners
 {
     public class StreamJoiner : PlantUnit
     {
-        public StreamJoiner(Guid id, string name, ProccesEquipmentType type, FocusFactory factory)
+        public StreamJoiner(Guid id, string name, ProcessEquipmentType type, FocusFactory factory)
             : base(id, name, type, factory)
         {
         }

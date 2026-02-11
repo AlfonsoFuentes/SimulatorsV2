@@ -73,7 +73,7 @@ namespace Simulator.Server.Databases.Entities.HC
                         InitialLevelValue = request.InitialLevelValue;
                         InitialLevelUnit = request.InitialLevelUnitName;
                         FocusFactory = request.FocusFactory;
-                        ProccesEquipmentType = ProccesEquipmentType.Tank;
+                        ProccesEquipmentType = ProcessEquipmentType.Tank;
 
                     }
                     break;
@@ -109,7 +109,7 @@ namespace Simulator.Server.Databases.Entities.HC
 
                     FocusFactory = FocusFactory,
                     Order = Order,
-                    EquipmentType = ProccesEquipmentType.Tank,
+                    EquipmentType = ProcessEquipmentType.Tank,
 
                 },
 

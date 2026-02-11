@@ -4,33 +4,24 @@ using QWENShared.Enums;
 namespace Simulator.Client.HCPages.Tanks;
 public partial class TankTable
 {
+    [Parameter]
     public List<TankDTO> Items { get; set; } = new();
     string nameFilter = string.Empty;
     public Func<TankDTO, bool> Criteria => x => x.Name.Contains(nameFilter, StringComparison.InvariantCultureIgnoreCase);
     public List<TankDTO> FilteredItems => string.IsNullOrEmpty(nameFilter) ? Items :
         Items.Where(Criteria).ToList();
+
+ 
     [Parameter]
     public Guid MainProcessId { get; set; }
     [Parameter]
     [EditorRequired]
     public FocusFactory FocusFactory { get; set; } = FocusFactory.None;
-    protected override async Task OnParametersSetAsync()
-    {
-        await GetAll();
-    }
-
+    [Parameter]
+    public EventCallback GetAllExternal { get; set; }
     async Task GetAll()
     {
-        var result = await ClientService.GetAll(new TankDTO()
-        {
-            MainProcessId = MainProcessId,
-
-
-        });
-        if (result.Succeeded)
-        {
-            Items = result.Data;
-        }
+       await GetAllExternal.InvokeAsync();
     }
     public async Task AddNew()
     {
@@ -54,7 +45,7 @@ public partial class TankTable
             await GetAll();
             StateHasChanged();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+      
     }
     async Task Edit(TankDTO response)
     {
@@ -74,7 +65,7 @@ public partial class TankTable
         {
             await GetAll();
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
     }
     public async Task Delete(TankDTO response)
     {
@@ -104,7 +95,7 @@ public partial class TankTable
             }
            
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+ 
 
     }
     HashSet<TankDTO> SelecteItems = null!;
@@ -137,7 +128,7 @@ public partial class TankTable
             }
            
         }
-        await RefreshProcessFlowDiagram.InvokeAsync();
+
 
     }
 }

@@ -56,7 +56,7 @@ namespace Simulator.Server.Databases.Entities.HC
                         TimeToReviewAUValue = request.TimeToReviewAUValue;
                         TimeToReviewAUUnit = request.TimeToReviewAUUnitName;
                         PackageType = request.PackageType;
-                        ProccesEquipmentType = ProccesEquipmentType.Line;
+                        ProccesEquipmentType = ProcessEquipmentType.Line;
                         Name = request.Name;
                         FocusFactory = request.FocusFactory;
                  

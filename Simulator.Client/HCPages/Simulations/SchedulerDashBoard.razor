@@ -20,7 +20,7 @@
                 <div class="pa-2 border-b-2">
                     <MudText Typo="Typo.subtitle2" Color="Color.Success"><b>🧠 DECISION LOGIC</b></MudText>
                 </div>
-               
+
                 <div class="flex-grow-1 overflow-auto">
                     <MudTable Items="@Scheduler?.DemandSnapshot" Dense="true" Hover="true" FixedHeader="true" Striped="true" Elevation="0">
                         <HeaderContent>
@@ -29,6 +29,7 @@
                             <MudTh>Autonomy</MudTh>
                             <MudTh>Mass in Process</MudTh>
                             <MudTh>Mixer assigned</MudTh>
+                            <MudTh>Best Mixer</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd>
@@ -61,6 +62,19 @@
                                 {
                                     <MudText Typo="Typo.caption">-</MudText>
                                 }
+                            </MudTd>
+                            <MudTd>
+                                @if (context.BestMixerName != string.Empty)
+                                {
+                                    <MudText Typo="Typo.body2" Style="font-weight:bold;">@context.BestMixerName</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@($"{context.BestMixerBatchTime:F2} min")</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption">-</MudText>
+                                }
+
+
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
