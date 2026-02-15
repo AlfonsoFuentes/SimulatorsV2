@@ -1,10 +1,6 @@
-﻿using GeminiSimulator.Helpers;
-using GeminiSimulator.Main;
-using GeminiSimulator.NewFilesSimulations.Operators;
+﻿using GeminiSimulator.NewFilesSimulations.Operators;
 using GeminiSimulator.NewFilesSimulations.Tanks;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers;
-using GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps;
-using GeminiSimulator.PlantUnits.Tanks;
 using QWENShared.DTOS.SimulationPlanneds;
 using Simulator.Shared.Simulations;
 using System.Reflection;
@@ -92,7 +88,7 @@ namespace GeminiSimulator.NewFilesSimulations.Context
             {
                 unit.WireUp(_context.AllUnits);
             }
-        
+
             PropagateCapabilitiesToPumps();
             PropagateMixerBatchCycletime();
             Console.WriteLine("=== PLANTA CONSTRUIDA EXITOSAMENTE ===");
@@ -115,52 +111,12 @@ namespace GeminiSimulator.NewFilesSimulations.Context
                 Console.WriteLine($"[...] Ejecutando {loader.GetType().Name}...");
                 loader.Load(planData);
             }
-            if (planData.OperatorHasNotRestrictionToInitBatch)
-            {
-                Console.WriteLine("--- Configurando Operadores sin Restricciones de Inicio de Lotes ---");
-                _context.SetOperationOperatorTime(OperatorEngagementType.Infinite,new Amount(0,TimeUnits.Second));
 
-
-            }
-            else
-            {
-                if (planData.MaxRestrictionTimeValue > 0)
-                {
-                    _context.SetOperationOperatorTime(OperatorEngagementType.StartOnDefinedTime, planData.MaxRestrictionTime);
-                
-                }
-                else
-                {
-                    _context.SetOperationOperatorTime(OperatorEngagementType.FullBatch, new Amount(0, TimeUnits.Second));
-         
-                }
-            }
+            SetPreferedMixersToLines(planData);
             Console.WriteLine("=== PLAN APLICADO EXITOSAMENTE ===");
         }
-        void SpecializedVesselReads()
-        {
-            // Obtenemos los tanques que fueron cargados inicialmente como StorageTank
-            //var genericTanks = _context.Tanks.Values.ToList();
 
-            //// Limpiamos las listas de tipos específicos antes de rellenar 
-            //// (por si acaso se llama dos veces)
-            //_context.TanksRawMaterial.Clear();
-            //_context.TanksInHouse.Clear();
-            //_context.TanksContinuousWip.Clear();
-            //_context.TanksBatchWip.Clear();
-
-            //foreach (var generic in genericTanks)
-            //{
-            //    // El TankSpecializer crea la instancia correcta (Tipo 1, 2, 3 o 4)
-            //    var specialized = TankSpecializer.CreateSpecialized(generic);
-
-            //    // Llamamos al registro especial que acabamos de crear
-            //    _context.RegisterUnitTanks(specialized);
-
-            //    Console.WriteLine($"[Especializador] '{specialized.Name}' clasificado en su lista específica.");
-            //}
-        }
-        void PropagateMixerBatchCycletime()
+       public void PropagateMixerBatchCycletime()
         {
 
             foreach (var mixer in _context.Mixers)
@@ -174,7 +130,7 @@ namespace GeminiSimulator.NewFilesSimulations.Context
                     Amount totalTime = new Amount(0, TimeUnits.Minute);
                     foreach (var step in steps.ToList())
                     {
-                        if(step == null)     continue;
+                        if (step == null) continue;
                         if (step.IsMaterialAddition)
                         {
                             var ingredientId = step.IngredientId;
@@ -196,8 +152,18 @@ namespace GeminiSimulator.NewFilesSimulations.Context
                         }
                         else
                         {
-                            totalTime += step.Duration;
+                            if (step.OperationType != QWENShared.Enums.BackBoneStepType.Connect_Mixer_WIP)
+                            {
+                                totalTime += step.Duration;
+                            }
+                            else if (_context.BatchTransferCalculationModel == TransferBatchToMixerCalculation.Manual)
+                            {
+                                 totalTime += step.Duration;
+                            }
+
+
                         }
+                    
                     }
                     mixer.TheoricalBatchTime[material] = totalTime;
 
@@ -230,6 +196,26 @@ namespace GeminiSimulator.NewFilesSimulations.Context
                         pump.SetProductCapability(material, pump.NominalFlowRate);
 
                         Console.WriteLine($" -> [Config] Pump '{pump.Name}' enabled for Material: {material.Name} (Source: {tank.Name})");
+                    }
+                }
+            }
+        }
+        public void SetPreferedMixersToLines(SimulationPlannedDTO planData)
+        {
+
+            foreach (var plannedline in planData.PlannedLines)
+            {
+                var newLine = _context.Lines.FirstOrDefault(x => x.Id == plannedline.LineId);
+                if (newLine != null)
+                {
+                    foreach (var prefredMixer in plannedline.PreferedMixerDTOs)
+                    {
+                        var newMixer = _context.Mixers.FirstOrDefault(x => x.Id == prefredMixer.MixerId);
+                        if (newMixer != null)
+                        {
+                         
+                            newMixer.AddPreferedLine(newLine);
+                        }
                     }
                 }
             }

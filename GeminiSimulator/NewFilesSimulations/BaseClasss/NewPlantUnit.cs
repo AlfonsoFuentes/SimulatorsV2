@@ -8,7 +8,7 @@ using UnitSystem;
 
 namespace GeminiSimulator.NewFilesSimulations.BaseClasss
 {
-    public abstract class NewPlantUnit : IResourceRequester
+    public abstract class NewPlantUnit 
     {
         // --- IDENTIFICATION ---
 
@@ -69,9 +69,8 @@ namespace GeminiSimulator.NewFilesSimulations.BaseClasss
         // NOTA: _capturedResource ya no es necesario con la nueva lógica, pero lo dejo si lo usas en UI
        
 
-        // --- QUEUE MANAGEMENT (UNIFICADO) ---
-        // Eliminada _requestQueue. Usamos solo _reservationQueue.
-        protected readonly List<IResourceRequester> _reservationQueue = new();
+       
+        protected readonly List<NewPlantUnit> _reservationQueue = new();
 
         private readonly HashSet<NewPlantUnit> _holdingResources = new();
         public IReadOnlyCollection<NewPlantUnit> HoldingResources => _holdingResources;
@@ -116,7 +115,7 @@ namespace GeminiSimulator.NewFilesSimulations.BaseClasss
             return false;
         }
 
-        public void Reserve(IResourceRequester requester)
+        public void Reserve(NewPlantUnit requester)
         {
             if (!_reservationQueue.Any(x => x.Id == requester.Id))
             {
@@ -124,7 +123,7 @@ namespace GeminiSimulator.NewFilesSimulations.BaseClasss
             }
         }
 
-        public void CancelReservation(IResourceRequester requester)
+        public void CancelReservation(NewPlantUnit requester)
         {
             var item = _reservationQueue.FirstOrDefault(x => x.Id == requester.Id);
             if (item != null) _reservationQueue.Remove(item);
@@ -188,43 +187,7 @@ namespace GeminiSimulator.NewFilesSimulations.BaseClasss
             TransitionCaptureState(new NewUnitCapturedBy(this));
         }
 
-        // --- FORECASTING (Ajustado para lógica de cola) ---
-        public virtual DateTime GetForecastedAvailability(IResourceRequester requester)
-        {
-            // 1. Buscamos tu lugar en la fila
-            int index = _reservationQueue.FindIndex(x => x.Id == requester.Id);
-
-            // CASO A: No estás en la fila (vas al final)
-            if (index == -1)
-            {
-                if (_reservationQueue.Count > 0)
-                    return _reservationQueue.Last().CurrentBatchReleaseTime;
-
-                // Si no hay cola, miramos si hay dueño actual
-                return _currentOwner?.CurrentBatchReleaseTime ?? (this.AvailableAt > CurrentDate ? this.AvailableAt : CurrentDate);
-            }
-
-            // CASO B: Eres el PRIMERO en la fila (Posición 0)
-            if (index == 0)
-            {
-                // Si hay un dueño trabajando que NO soy yo, tengo que esperar a que termine.
-                // (Aunque sea el primero en la lista, el recurso físico puede estar ocupado por el dueño saliente 
-                // en el microsegundo de transición, o por un dueño asignado manualmente).
-                if (_currentOwner != null && _currentOwner.Id != requester.Id)
-                {
-                    return _currentOwner.CurrentBatchReleaseTime;
-                }
-
-                // Si no hay dueño, dependo de la disponibilidad horaria del equipo
-                return this.AvailableAt > CurrentDate ? this.AvailableAt : CurrentDate;
-            }
-
-            // CASO C: Tienes gente delante en la fila
-            var previousUser = _reservationQueue[index - 1];
-            return previousUser.CurrentBatchReleaseTime;
-        }
-
-        public virtual DateTime CurrentBatchReleaseTime { get; }
+       
 
         // --- HELPERS DE RELACIONES ---
         // (Estaban comentados en tu código, aquí se habilitan para que funcione AssignResource)
@@ -232,13 +195,6 @@ namespace GeminiSimulator.NewFilesSimulations.BaseClasss
         public void RemoveHoldingResource(NewPlantUnit resource) => _holdingResources.Remove(resource);
      
 
-
-        // =========================================================
-        // RESTO DE LA CLASE (KPIs, UI, Calculate, etc.)
-        // =========================================================
-
-        // ... (Mantén aquí el resto de métodos como AddInlet, WireUp, Calculate, UpdateKpis, CheckStatus, Report, etc.
-        // tal como los tenías en tu código original, ya que esos no cambian con este fix) ...
 
         public void AddInlet(Guid fromId) { if (!_inputIds.Contains(fromId)) _inputIds.Add(fromId); }
         public void AddOutlet(Guid toId) { if (!_outputIds.Contains(toId)) _outputIds.Add(toId); }
@@ -445,12 +401,7 @@ namespace GeminiSimulator.NewFilesSimulations.BaseClasss
     }
 
     // ... Interfaces (IResourceRequester, etc.) se mantienen igual ...
-    public interface IResourceRequester
-    {
-        Guid Id { get; }
-        string Name { get; }
-        DateTime CurrentBatchReleaseTime { get; }
-    }
+    
     
     public interface IStateLabels
     {

@@ -38,7 +38,7 @@ namespace GeminiSimulator.NewFilesSimulations.Operators
                     // EL VÍNCULO DINÁMICO:
                     // Su disponibilidad es exactamente el fin proyectado del Mixer
                     // (El PlannedEnd de la última actividad en la cinta del Mixer)
-                    return mixer.BatchManager.CurrentBatchProjectedEnd;
+                    return mixer.BatchManager.CurrentBatchProjectedEndDate;
                 }
 
                 // CASO 3: Si es StartOnDefinedTime, el valor ya se fijó en el TimedTaskState

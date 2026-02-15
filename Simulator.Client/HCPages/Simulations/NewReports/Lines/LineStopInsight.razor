@@ -1,0 +1,15 @@
+﻿@using GeminiSimulator.NewFilesSimulations.PackageLines
+<MudPaper Elevation="4" Class="pa-5 flex-grow-1" Style="border-radius: 12px; min-height: 400px;">
+    <MudText Typo="Typo.h6" Style="font-weight: 900; color: #594ae2;" Class="mb-5">DOWNTIME BREAKDOWN</MudText>
+    <div class="d-flex flex-column">
+        <LineStopBar Label="Inlet Starvation" Value="@Sum(r => r.InletStarvationSeconds)" Color="#FF9800" Icon="@Icons.Material.Filled.HourglassEmpty" />
+        <LineStopBar Label="Internal Loss" Value="@Sum(r => r.InternalLossSeconds)" Color="#594ae2" Icon="@Icons.Material.Filled.SettingsSuggest" />
+        <LineStopBar Label="Blocked" Value="@Sum(r => r.BlockedByResourceSeconds)" Color="#FFD600" Icon="@Icons.Material.Filled.Block" />
+        <LineStopBar Label="Planned Down" Value="@Sum(r => r.PlannedDownTimeSeconds)" Color="#78909C" Icon="@Icons.Material.Filled.EventBusy" />
+    </div>
+</MudPaper>
+@code {
+    [Parameter] public NewLine? SelectedLine { get; set; }
+    [Parameter] public List<NewLine> AllLines { get; set; } = new();
+    private double Sum(Func<ProductionOrderReport, double> s) => SelectedLine != null ? (SelectedLine.CurrentOrderReport != null ? s(SelectedLine.CurrentOrderReport) : 0) : AllLines.Sum(l => l.CurrentOrderReport != null ? s(l.CurrentOrderReport) : 0);
+}

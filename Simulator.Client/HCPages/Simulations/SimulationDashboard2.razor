@@ -52,10 +52,10 @@ else
                     <MudTd DataLabel="Status">@(context.DestinationVessel?.Name ?? string.Empty)</MudTd>
                     <MudTd>
                         <span style="font-family: monospace; font-size: 1.2em; font-weight: bold;">
-                            @FormatTime(context.MixerWillbeFreeAt.GetValue(TimeUnits.Second))
+                            @FormatTime(context.CurrentBatchRealTime.GetValue(TimeUnits.Second))
                         </span>
                     </MudTd>
-                    <MudTd DataLabel="Free At">@context.MixerProjectedFreeTime.ToString("HH:mm:ss")</MudTd>
+                    <MudTd DataLabel="Free At">  @FormatTime(context.MixerWillbeFreeAt.GetValue(TimeUnits.Second))</MudTd>
                 </RowTemplate>
             </MudTable>
         </MudItem>
@@ -89,7 +89,7 @@ else
                     <MudTd DataLabel="Line">@context.CurrentLineName</MudTd>
                     <MudTd DataLabel="Mass in Process">@($"{context.CurrentLevel.GetValue(MassUnits.KiloGram):F0}, Kg")</MudTd>
                     @* Columna MASS IN PROCESS: Formato '0000, Kg' sin decimales *@
-                    <MudTd DataLabel="Mass in Process">@($"{context.MassInProcess.GetValue(MassUnits.KiloGram):F0}, Kg")</MudTd>
+                    <MudTd DataLabel="Mass in Process">@($"{context.MassInManufacturePendingToReceive.GetValue(MassUnits.KiloGram):F0}, Kg")</MudTd>
                     @* Columna AUTONOMY: Usando tu lógica actual de formateo de tiempo *@
                     <MudTd DataLabel="Autonomy">
                         <span style="font-weight: bold;">

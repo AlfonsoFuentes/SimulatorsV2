@@ -4,9 +4,6 @@ using GeminiSimulator.NewFilesSimulations.ManufactureEquipments;
 using GeminiSimulator.NewFilesSimulations.Operators;
 using GeminiSimulator.NewFilesSimulations.PackageLines;
 using QWENShared.Enums;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using UnitSystem;
 
 namespace GeminiSimulator.NewFilesSimulations.Tanks
@@ -35,11 +32,6 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
         protected List<NewPump> _OutletPumps => Outputs.OfType<NewPump>().ToList();
         protected List<NewPump> _InletPumps => Inputs.OfType<NewPump>().ToList();
 
-
-        public void SetOutletMassCounterToZero()
-        {
-            _totalOutletMass = 0;
-        }
         protected double CurrentOutletFlow = 0;
         public virtual void SetOutletFlow()
         {
@@ -48,6 +40,7 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
 
             _totalOutletMass += CurrentOutletFlow;
             _currentLevel -= CurrentOutletFlow;
+
         }
         public virtual void SetInletFlow(double inletflow)
         {
@@ -72,30 +65,37 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
         }
         protected override void AddSpecificReportData(List<NewInstantaneousReport> reportList)
         {
-            // 1. NIVEL (Lo más importante)
-            // Calculamos porcentaje visual
+            // DEFINICIÓN ESTRICTA DE COLORES
+            string neutral = ""; // Negro
+            string alert = "#F44336";   // Rojo
+
+            // 1. NIVEL
+            // Lógica: Si está fuera de rango (Alarma) -> Rojo. Si está OK -> NEGRO.
+            bool isAlarm = _currentLevel < LoLevelAlarm.GetValue(MassUnits.KiloGram) ||
+                           _currentLevel > HiLevelAlarm.GetValue(MassUnits.KiloGram);
+
+            string levelColor = isAlarm ? alert : neutral;
+
             double pct = Capacity.GetValue(MassUnits.KiloGram) == 0 ? 0 :
                 (_currentLevel / Capacity.GetValue(MassUnits.KiloGram)) * 100;
-
-            string colorLevel = pct < 10 ? "#F44336" : "#2196F3"; // Rojo si está vacío
-
+            if (CurrentMaterial != null)
+            {
+                reportList.Add(new NewInstantaneousReport("Material", CurrentMaterial.Name, IsBold: false, Color: neutral));
+            }
             reportList.Add(new NewInstantaneousReport("Level",
                 $"{CurrentLevel.ToString()} ({pct:F0}%)",
-                IsBold: true, Color: colorLevel));
+                IsBold: isAlarm, // Negrita solo si es alarma
+                Color: levelColor)); // ¡AQUÍ ESTABA EL ERROR DEL AZUL!
 
-            // 2. BOMBAS DE SALIDA
-            // Mostramos cuáles están conectadas y su estado
+            // 2. BOMBAS (Todo Negro)
             var pumps = Outputs.OfType<NewPump>().ToList();
             if (pumps.Any())
             {
-                reportList.Add(new NewInstantaneousReport("--- PUMPS ---", "", Color: "#9E9E9E"));
+                reportList.Add(new NewInstantaneousReport("--- PUMPS ---", "", Color: neutral));
                 foreach (var pump in pumps)
                 {
-
                     string pumpStatus = pump.CurrentOwner == null ? "Idle" : $"In Use by {pump.CurrentOwner.Name}";
-                    string pumpColor = pumpStatus == "Idle" ? "#BDBDBD" : "#4CAF50";
-
-                    reportList.Add(new NewInstantaneousReport(pump.Name, pumpStatus, Color: pumpColor));
+                    reportList.Add(new NewInstantaneousReport(pump.Name, pumpStatus, Color: neutral));
                 }
             }
         }
@@ -320,17 +320,8 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
         public double _massRemainingToSendToLine => _massRequiredFromLine - _massSentToLine;
         public double _massSentToLine;
 
-
-        public void SetCoutersToZero()
-        {
-            _massRequiredFromLine = 0;
-            _massSentToLine = 0;
-            _massReceivedFromManufacture = 0;
-            _massInManufacturePendingToReceive = 0;
-            _massRequiredFromManufacture = 0;
-            _currentLevel = 0;
-
-        }
+        public Amount MassPendingToSendToLine=>new Amount(_massRemainingToSendToLine,MassUnits.KiloGram);
+        public Amount MassSentToLine => new Amount(_massSentToLine, MassUnits.KiloGram);
         public override void SetOutletFlow()
         {
             base.SetOutletFlow();
@@ -341,66 +332,54 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
         public void ReceiveOrderFromProductionLine(NewLine _CurrentLine, ProductDefinition product, double _MassToPack)
         {
             CurrentLine = _CurrentLine;
-            // 1. Configuramos el producto
             CurrentMaterial = product;
 
-            // 2. Registramos la demanda total de la línea
+            // LÓGICA VIEJA
             _massRequiredFromLine = _MassToPack;
-            _massSentToLine = 0; // Reseteamos contador de salida
+            _massSentToLine = 0;
+            // (Lógica de cálculo de _massRequiredFromManufacture...)
 
-            // 3. Calculamos cuánto hay que pedirle a Manufactura
-            // Lógica correcta: Lo que necesito que fabriquen = Total Pedido - Lo que ya tengo
-            double currentStock = CurrentLevel.GetValue(MassUnits.KiloGram);
-
-            if (currentStock >= _MassToPack)
-            {
-                // Si ya tengo más de lo que piden, no necesito fabricar nada
-                _massRequiredFromManufacture = 0;
-            }
-            else
-            {
-                // Solo fabrico la diferencia
-                _massRequiredFromManufacture = _MassToPack - currentStock;
-            }
-
-            // 4. Reseteamos los contadores de progreso de manufactura
+            _massRequiredFromManufacture = _MassToPack - _currentLevel;
+            // --- NUEVA LÓGICA (Inicialización del Contrato) ---
             _massReceivedFromManufacture = 0;
-            _massInManufacturePendingToReceive = 0;
+
+            // Si ya hay stock, la "Promesa" inicial es 0, 
+            // y el NewBalanceToOrder dirá que solo falta fabricar la diferencia.
+        }
+
+        public void SetCoutersToZero()
+        {
+            // LÓGICA VIEJA
+            _massRequiredFromLine = 0;
+            _massSentToLine = 0;
+            _massReceivedFromManufacture = 0;
+            _massRequiredFromManufacture = 0;
+
+
+            _currentLevel = 0;
         }
         // En NewRecipedInletTank.cs (o NewWipTank)
 
         protected override void AddSpecificReportData(List<NewInstantaneousReport> reportList)
         {
-            // 1. PRODUCTO (Si está asignado)
-            if (CurrentMaterial != null)
-            {
-                reportList.Add(new NewInstantaneousReport("Product", CurrentMaterial.Name, IsBold: true, Color: "#3F51B5"));
-            }
+            string neutral = ""; // Negro estricto
 
-            // 2. NIVEL FÍSICO
-            reportList.Add(new NewInstantaneousReport("Level", CurrentLevel.ToString(), IsBold: true, Color: "#2196F3"));
-            reportList.Add(new NewInstantaneousReport("Mass in Process", MassInProcess.ToString(), IsBold: true, Color: "#2196F3"));
-            reportList.Add(new NewInstantaneousReport("Time to Empty Level", $"{Math.Round(TimeToEmptyCurrentLevel.GetValue(TimeUnits.Minute), 1)}, min", IsBold: true, Color: "#2196F3"));
-            reportList.Add(new NewInstantaneousReport("Time to Empty Mass in Process", $"{Math.Round(PendingTimeEmptyMassInProcess.GetValue(TimeUnits.Minute), 1)}, min", IsBold: true, Color: "#2196F3"));
+            // 1. Llamamos a la base (Traerá el Nivel en Negro/Rojo)
+            base.AddSpecificReportData(reportList);
 
-            // 3. LO QUE VIENE EN CAMINO (Vital para el Scheduler)
-            if (_massInManufacturePendingToReceive > 0)
-            {
-                reportList.Add(new NewInstantaneousReport("Incoming", $"+{_massInManufacturePendingToReceive:F1} kg", Color: "#FFC107")); // Ámbar
+            // 2. PRODUCTO (Estaba saliendo azul/morado)
+           
+            reportList.Add(new NewInstantaneousReport("Mass Pending To Send to Line", MassPendingToSendToLine.ToString(), IsBold: false, Color: neutral));
+            reportList.Add(new NewInstantaneousReport("Mass Pending From Manufacture", MassPendingToReceiveFromManufacture.ToString(), IsBold: false, Color: neutral));
 
-                // Identificar quién me lo manda (Dueño actual)
-                if (CurrentOwner != null)
-                {
-                    reportList.Add(new NewInstantaneousReport("From", CurrentOwner.Name, FontSize: "0.75rem"));
-                }
-            }
 
-            // 4. DESTINO (Línea de Empaque)
-            // Buscamos a qué línea estamos conectados
+
+
+            // 5. DESTINO
             var connectedLine = Outputs.OfType<NewLine>().FirstOrDefault();
             if (connectedLine != null)
             {
-                reportList.Add(new NewInstantaneousReport("Feeding", $"-> {connectedLine.Name}", Color: "#4CAF50"));
+                reportList.Add(new NewInstantaneousReport("Feeding", $"-> {connectedLine.Name}", Color: neutral));
             }
         }
     }
@@ -409,28 +388,39 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
         protected double _massRequiredFromManufacture;
         protected double _massReceivedFromManufacture;
         protected double _massInManufacturePendingToReceive;
+
+
+
+
+
         public NewMixer? BestCandidate { get; set; }
         public NewMixer? AssignedMixer { get; set; }
-        public Queue<NewMixer> BatchQueue { get; set; } = new();
-        public void AddMassInProcess(NewMixer _mixer, double massinprocess)
+        public Queue<NewMixer> MixerQueue { get; set; } = new();
+        public Queue<BatchOrder> ProcesedBatchQueue { get; set; } = new();
+        public virtual void AddMassInProcess(NewMixer _mixer, double massinprocess)
         {
-            BatchQueue.Enqueue(_mixer);
+            MixerQueue.Enqueue(_mixer);
+
+            // LÓGICA VIEJA
             _massInManufacturePendingToReceive += massinprocess;
+
+            // --- NUEVA LÓGICA ---
+
         }
-        public Amount MassInTransit => new Amount(_massInManufacturePendingToReceive, MassUnits.KiloGram);
+        public Amount MassInManufacturePendingToReceive => new Amount(_massInManufacturePendingToReceive, MassUnits.KiloGram);
 
         // 2. Lo que ya llegó (Received)
-        public Amount MassReceived => new Amount(_massReceivedFromManufacture, MassUnits.KiloGram);
+        public Amount MassReceivedFromManufacture => new Amount(_massReceivedFromManufacture, MassUnits.KiloGram);
 
         // 3. El total de la orden (Required)
-        public Amount MassRequired => new Amount(_massRequiredFromManufacture, MassUnits.KiloGram);
+        public Amount MassRequiredFromManufacture => new Amount(_massRequiredFromManufacture, MassUnits.KiloGram);
 
         // 4. EL REAL REMANENTE (La Resta)
         // Exponemos el resultado del cálculo protected
-        public Amount MassRemainingToOrder => new Amount(_massRemainingFromManufacture, MassUnits.KiloGram);
+        public Amount MassPendingToReceiveFromManufacture => new Amount(_massPendingToReceiveFromManufacture, MassUnits.KiloGram);
 
         // Cálculo protegido contra negativos visuales
-        protected double _massRemainingFromManufacture
+        protected double _massPendingToReceiveFromManufacture
         {
             get
             {
@@ -441,11 +431,11 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
 
         // Visión Global (Físico + Lo que viene en camino)
         protected double _totalMassInProcess => _currentLevel + _massInManufacturePendingToReceive;
-        public Amount MassInProcess => new Amount(_totalMassInProcess, MassUnits.KiloGram);
+        public Amount TotalMassInProcess => new Amount(_totalMassInProcess, MassUnits.KiloGram);
 
         // KPI: Tiempo para quedarse seco considerando lo que viene en camino
         protected double _pendingTimeEmptyMassInProcess =>
-            (_massRequiredFromManufacture == 0 || _AverageOutletFlow == 0)
+            (_AverageOutletFlow == 0)
             ? 0
             : _totalMassInProcess / _AverageOutletFlow;
 
@@ -476,71 +466,70 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
         }
         public override void SetInletFlow(double inletflow)
         {
-            // A. Física (Nivel)
+            // A. Física de nivel (Base)
             base.SetInletFlow(inletflow);
 
-            // B. Contabilidad (Balance de Masa)
-            _massReceivedFromManufacture += inletflow;
-            _massInManufacturePendingToReceive -= inletflow;
+            if (CurrentOwner != null)
+            {
+                // B. LÓGICA VIEJA (Riesgo de doble resta detectado)
+                _massReceivedFromManufacture += inletflow;
 
-            // C. Limpieza de residuos matemáticos (Tolerance)
+               
 
+                if (CurrentOwner is NewMixer)
+                {
+                    _massInManufacturePendingToReceive -= inletflow;
+                }
+            }
         }
         public void ReceiveStopDischargFromMixer()
         {
+      
             AssignedMixer = null!;
-            if (BatchQueue.TryDequeue(out var _mixer))
-            {
-                AssignedMixer = _mixer;
-                TransitionInletState(new NewInletRecipedTankAvailableState(this));
-            }
+            TransitionInletState(new NewInletRecipedTankAvailableState(this));
         }
+
+        // NUEVO: Método para empalmar órdenes (Hot Swap)
+       
+        
 
         // --- 4. REPORTES ESPECÍFICOS (La parte que faltaba) ---
         protected override void AddSpecificReportData(List<NewInstantaneousReport> reportList)
         {
-            // IMPORTANTE: Llamamos a la base primero para que pinte Capacidad, Nivel y TimeToEmpty físico
+            string neutral = ""; // Negro estricto
+
+            // 1. Llamamos a la base (Traerá el Nivel en Negro/Rojo)
             base.AddSpecificReportData(reportList);
-            // 2. PRODUCTO ACTUAL (Lo que pediste)
-            if (CurrentMaterial != null)
+
+            // 2. PRODUCTO (Estaba saliendo azul/morado)
+            
+
+            // 3. DATOS DE PROCESO (Estaban saliendo en azul #2196F3)
+            // Forzamos 'neutral' en todos:
+            reportList.Add(new NewInstantaneousReport("Mass in Process", TotalMassInProcess.ToString(), IsBold: true, Color: neutral));
+           
+
+            reportList.Add(new NewInstantaneousReport("Time to Empty Level",
+                $"{Math.Round(TimeToEmptyCurrentLevel.GetValue(TimeUnits.Minute), 1)}, min",
+                IsBold: true, Color: neutral));
+
+            reportList.Add(new NewInstantaneousReport("Time to Empty Mass in Process",
+                $"{Math.Round(PendingTimeEmptyMassInProcess.GetValue(TimeUnits.Minute), 1)}, min",
+                IsBold: true, Color: neutral));
+
+            // 4. DATOS DE ORDEN (In Transit, Incoming, etc.)
+            if (_massInManufacturePendingToReceive > 0.01) // Usando tolerancia simple
             {
-                reportList.Add(new NewInstantaneousReport("Product", CurrentMaterial.Name, IsBold: true, Color: "#673AB7"));
-            }
-            // Ahora agregamos la capa "Logística"
-            // Solo mostramos esto si hay una orden activa (Required > 0) para no ensuciar la UI
-            if (_massRequiredFromManufacture > MASS_TOLERANCE)
-            {
-                reportList.Add(new NewInstantaneousReport("--- ORDER INFO ---", "", Color: "#000000", IsBold: true));
+                reportList.Add(new NewInstantaneousReport("Incoming", $"+{_massInManufacturePendingToReceive:F1} kg", Color: neutral));
 
-                reportList.Add(new NewInstantaneousReport("Required",
-                    MassRequired.ToString(), // Usamos nombre corto
-                    Color: "#9C27B0"));
-
-                reportList.Add(new NewInstantaneousReport("Received",
-                    MassReceived.ToString(),
-                    Color: "#4CAF50"));
-
-                // Aquí usamos la propiedad correcta para "In Transit"
-                reportList.Add(new NewInstantaneousReport("In Transit",
-                    MassInTransit.ToString(),
-                    Color: "#FFC107"));
-
-                //Opcional: Mostrar cuánto falta (Remaining real)
-
-
-                reportList.Add(new NewInstantaneousReport("Balance",
-                    MassRemainingToOrder.ToString(),
-                    Color: "#F44336"));
-
-
-                // KPI Financiero
-                if (_pendingTimeEmptyMassInProcess > 0)
+                if (CurrentOwner != null)
                 {
-                    reportList.Add(new NewInstantaneousReport("Strategic TTL",
-                        PendingTimeEmptyMassInProcess.ToString(),
-                        IsBold: true, Color: "#673AB7"));
+                    reportList.Add(new NewInstantaneousReport("From", CurrentOwner.Name, FontSize: "0.75rem", Color: neutral));
                 }
             }
+
+            // 5. DESTINO
+          
         }
 
     }
@@ -586,39 +575,35 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
 
         public void CheckTransitions()
         {
-            // 1. CHEQUEO DE LLENADO
-            // Usamos HiLevelControl como el límite de seguridad operativa
-            if (_tank.CurrentLevel.GetValue(MassUnits.KiloGram) >= _tank.HiLevelControl.GetValue(MassUnits.KiloGram))
+            // LÓGICA PARA SKID (Flujo Continuo)
+            if (_tank.CurrentOwner is NewSkid skid)
             {
-                // CASO A: El dueño es un MIXER (Proceso Batch)
-                // No queremos "matar" al Mixer, solo pausarlo.
-                if (_tank.CurrentOwner is NewMixer mixer)
+                // VIEJO: var total = _tank.MassRequired + _tank.LoLevelAlarm;
+                var total = _tank.MassPendingToReceiveFromManufacture + _tank.LoLevelAlarm;
+                // --- NUEVO (Usa el balance limpio) ---
+                if (total.GetValue(MassUnits.KiloGram) <= 0.01 || _tank.CurrentLevel >= _tank.HiLevelControl)
                 {
-                    // --- CORRECCIÓN CRÍTICA: NUEVA ARQUITECTURA ---
-                    // Usamos MasterWaiting.
-                    // El Mixer pasa a estado Naranja: "Waiting for {TankName}"
-                    mixer.TransitionGlobalState(
-                        new GlobalState_MasterWaiting(mixer, _tank)
-                    );
-
-                    // El tanque pasa al estado de "Retención con Histéresis" que arreglamos antes.
-                    // Ese estado se encargará de despertar al Mixer cuando baje el nivel (al 85% por ejemplo).
-                    _tank.TransitionInletState(new NewRecipedTankForMixerFullState(_tank));
+                    skid.ReceiveStopCommand();
+                    _tank.TransitionInletState(new NewInletRecipedTankAvailableState(_tank));
                     return;
                 }
+            }
 
-                // CASO B: El dueño es un SKID (Proceso Continuo)
-                // En skids, llenarse suele significar "Fin del Lote".
-                if (_tank.CurrentOwner is NewSkid skid)
+            // LÓGICA PARA MIXER (Baches)
+            if (_tank.CurrentOwner is NewMixer mixer)
+            {
+                if (_tank.CurrentLevel >= _tank.HiLevelControl)
                 {
-                    // Ordenamos parada total y liberación de recursos
-                    skid.ReceiveStopCommand();
-
-                    // El tanque queda libre para quien quiera usarlo después
-                    _tank.TransitionInletState(new NewInletRecipedTankAvailableState(_tank));
+                    // Bloqueo por nivel físico (Hysteresis)
+                    _tank.TransitionInletState(new NewRecipedTankForMixerFullState(_tank));
                 }
             }
         }
+
+
+
+
+
     }
     public class NewRecipedTankForMixerFullState : INewInletState
     {
@@ -676,56 +661,6 @@ namespace GeminiSimulator.NewFilesSimulations.Tanks
             }
         }
     }
-    //public class NewRecipedTankForMixerFullState : INewInletState
-    //{
-    //    private readonly NewRecipedInletTank _tank;
 
-    //    public NewRecipedTankForMixerFullState(NewRecipedInletTank tank)
-    //    {
-    //        _tank = tank;
-    //    }
-
-    //    public bool IsProductive => true;
-    //    public string StateLabel => "Receiving Product Starved";
-    //    public string HexColor => "Gemini me dara el color aqui";
-
-    //    public void Calculate() { }
-
-    //    public void CheckTransitions()
-    //    {
-    //        if (_tank.CurrentOwner is NewMixer mixer)
-    //        {
-    //            // MATEMÁTICA CORRECTA:
-    //            // 1. ¿Cuánto espacio libre tengo? (Capacidad - Nivel Actual)
-    //            double emptySpace = _tank.Capacity.GetValue(MassUnits.KiloGram) - _tank.CurrentLevel.GetValue(MassUnits.KiloGram);
-
-    //            // 2. ¿Cuánto tiene el mixer todavía?
-    //            double mixerMass = mixer.CurrentLevel.GetValue(MassUnits.KiloGram);
-
-    //            // 3. LA CONDICIÓN: ¿Cabe todo lo del mixer en mi hueco?
-    //            // (Opcional: Podrías usar una histéresis simple como 'emptySpace > 100', 
-    //            // pero respetando tu lógica de "si cabe todo"):
-    //            if (emptySpace >= mixerMass)
-    //            {
-    //                // ¡SÍ CABE!
-
-    //                // 1. Despertamos al Mixer (Quitamos el Starved Global)
-    //                // Verificamos que esté pausado por nosotros para no romper nada
-    //                if (mixer.GlobalState is NewGlobalStarvedByResourceState)
-    //                {
-    //                    mixer.TransitionGlobalState(new NewGlobalAvailableState(mixer));
-    //                }
-
-    //                // 2. Nosotros volvemos a recibir
-    //                _tank.TransitionInletState(new NewRecipedTankReceivingState(_tank));
-    //            }
-
-    //            // NOTA: Si el mixer tiene MUCHO producto (ej. 2000kg) y el tanque es pequeño (1000kg),
-    //            // esta condición (emptySpace >= mixerMass) NUNCA se cumplirá.
-    //            // Si ese caso es posible, deberías cambiar la condición a:
-    //            // if (emptySpace > _tank.Capacity * 0.10) // Si tengo al menos 10% de espacio, dale.
-    //        }
-    //    }
-    //}
 }
 

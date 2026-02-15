@@ -1,6 +1,7 @@
 ﻿using GeminiSimulator.Helpers;
 using GeminiSimulator.Main;
 using GeminiSimulator.NewFilesSimulations.Context;
+using GeminiSimulator.NewFilesSimulations.Context.CheckAvailability;
 using QWENShared.DTOS.MainProcesss;
 using QWENShared.DTOS.SimulationPlanneds;
 using QWENShared.Enums;
@@ -188,6 +189,7 @@ namespace Simulator.Client.HCPages.MainProcesses
                 if (SimulationDTO != null)
                 {
                     Context = _builder.BuildPhysicalPlant(SimulationDTO);
+                    Context.Builder = _builder;
                     Simulation = new GeneralSimulation();
                     Simulation.ReadSimulationDataFromDTO(SimulationDTO);
 
@@ -196,6 +198,7 @@ namespace Simulator.Client.HCPages.MainProcesses
                         Simulation.SetPlanned(SelectedPlanned);
                         _builder.ApplyProductionPlan(SelectedPlanned);
                         _engine = new NewSimulationEngine(Context, Context.Scenario!);
+                        Context.Engine = _engine;
                     }
 
                     SimulationLoading = false;
@@ -211,6 +214,7 @@ namespace Simulator.Client.HCPages.MainProcesses
         }
         NewSimulationContext Context = new();
         NewSimulationBuilder _builder = new NewSimulationBuilder();
+
         public List<SimulationPlannedDTO> PlannedItems { get; set; } = new();
 
         async Task GetAllPlanneds(Guid _MainProcessId)
@@ -229,16 +233,20 @@ namespace Simulator.Client.HCPages.MainProcesses
         }
         SimulationPlannedDTO SelectedPlanned { get; set; } = null!;
         NewSimulationEngine _engine = null!;
+        PlanValidationReport ViabilityChechReport = null!;
         async Task SelectPlan(SimulationPlannedDTO planned)
         {
             await Task.Delay(1);
             SelectedPlanned = planned;
             if (!SimulationLoading && Simulation != null)
             {
-               
+
                 Showplanned = false;
                 _builder.ApplyProductionPlan(SelectedPlanned);
                 _engine = new NewSimulationEngine(Context, Context.Scenario!);
+                Context.Engine = _engine;
+
+                ViabilityChechReport = Context.GetDetailedViabilityReport();
             }
 
             StateHasChanged();

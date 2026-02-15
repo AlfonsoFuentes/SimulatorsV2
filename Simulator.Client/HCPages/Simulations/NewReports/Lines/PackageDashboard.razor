@@ -1,0 +1,70 @@
+﻿@page "/package-dashboard"
+@using GeminiSimulator.NewFilesSimulations.PackageLines
+@inject IPlantExportService PlantExportService
+@inject IBlazorDownloadFileService DownloadService
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" Class="pa-4 mb-2" Style="background-color: #594ae2; color: white; border-radius: 12px; display: flex; align-items: center;">
+            <MudIcon Icon="@Icons.Material.Filled.PrecisionManufacturing" Class="mr-3" />
+            <MudText Typo="Typo.h5" Style="font-weight: 900;">PACKAGING CONTROL CENTER</MudText>
+            <MudSpacer />
+            @if (Engine.Lines.Any())
+            {
+                <MudIconButton Icon="@Icons.Custom.FileFormats.FileExcel"
+                               Color="Color.Success"
+                               Variant="Variant.Filled"
+                            
+                               OnClick="DownloadMasterReport"
+                               Size="Size.Small" />
+             
+            }
+            @if (SelectedLine != null)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" OnClick="@(() => OnLineChanged(null))" Class="mr-2" />
+            }
+            <MudSelect T="NewLine" Label="VIEWING CONTEXT" Value="@SelectedLine" ValueChanged="OnLineChanged" Variant="Variant.Filled" Style="background: white; width: 300px;" Dense="true">
+                <MudSelectItem T="NewLine" Value="@(null)">GLOBAL PLANT VIEW</MudSelectItem>
+                @foreach (var line in Engine.Lines)
+                {
+                    <MudSelectItem T="NewLine" Value="@line">@line.Name.ToUpper()</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="4" Class="d-flex flex-column gap-3">
+            <LineDonutDisplay Title="@(SelectedLine?.Name ?? "PLANT AVERAGE")" AuValue="@CalculateAu()" />
+            <LineStopInsight SelectedLine="@SelectedLine" AllLines="@Engine.Lines.ToList()" />
+        </MudItem>
+        <MudItem xs="12" md="8">
+            @if (SelectedLine == null)
+            {
+                <LineGlobalOverview Lines="@Engine.Lines.ToList()" OnLineSelect="OnLineChanged" />
+            }
+            else
+            {
+
+                <LineDetailMonitor Line="@SelectedLine" />
+            }
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
+    private NewLine? SelectedLine;
+    private void OnLineChanged(NewLine? line) { SelectedLine = line; StateHasChanged(); }
+    private double CalculateAu() => SelectedLine != null ? (SelectedLine.CurrentOrderReport?.Real_AU ?? 0) : (Engine.Lines.Any(l => l.CurrentOrderReport != null) ? Engine.Lines.Where(l => l.CurrentOrderReport != null).Average(l => l.CurrentOrderReport!.Real_AU) : 0);
+    private async Task DownloadMasterReport()
+    {
+        // Generamos el reporte unificado (Líneas + Mixers)
+        var fileBytes = PlantExportService.GenerateMasterPlantReport(
+            Engine.Lines.ToList(),
+            Engine.Mixers.ToList()
+        );
+    
+        var fileName = $"Master_Plant_Report_{DateTime.Now:yyyyMMdd}.xlsx";
+
+        // ¡Poder de BlazorDownloadFile!
+        await DownloadService.DownloadFile(fileName, fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        
+    }
+}

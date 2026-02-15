@@ -1,0 +1,47 @@
+﻿@using GeminiSimulator.NewFilesSimulations.PackageLines
+
+
+
+<MudGrid Spacing="3">
+    @foreach (var line in Lines)
+    {
+        var report = line.CurrentOrderReport;
+        // Borde Verde (#4CAF50) si está produciendo, Naranja (#FF9800) si no
+        bool isProducing = line.State.ToLower().Contains("producing");
+        string statusColor = isProducing ? "#4CAF50" : "#FF9800";
+        string auIndigo = "#594ae2";
+
+        <MudItem xs="12" sm="6" lg="4">
+            <MudPaper Elevation="3" Class="pa-4" Style="@($"border-left: 8px solid {statusColor}; cursor: pointer;")"
+                      @onclick="@(() => OnLineSelect.InvokeAsync(line))">
+                
+                <div class="d-flex justify-space-between mb-1">
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: 900;">@line.Name.ToUpper()</MudText>
+                    <MudText Typo="Typo.h6" Style="@($"font-weight: 900; color: {auIndigo};")">
+                        @(report?.Real_AU.ToString("F1") ?? "0")%
+                    </MudText>
+                </div>
+
+                <div class="d-flex align-center mb-2">
+                    <div style="@($"width: 8px; height: 8px; border-radius: 50%; background-color: {statusColor}; margin-right: 8px;")"></div>
+                    <MudText Typo="Typo.caption" Style="font-weight: 800; color: #546e7a;">@line.State.ToUpper()</MudText>
+                </div>
+
+                <MudText Typo="Typo.caption" Style="display: block; color: #594ae2; font-weight: 700;">MAT: @(report?.MaterialName ?? "---")</MudText>
+                <MudText Typo="Typo.caption" Style="display: block;" Class="mb-2">SKU: <b>@(report?.SkuName ?? "NO SCHEDULE")</b></MudText>
+
+                <div class="mt-2">
+                    <div class="d-flex justify-space-between">
+                        <MudText Typo="Typo.caption">PACKED: @(report?.ProducedMassKg.ToString("N0") ?? "0") kg</MudText>
+                        <MudText Typo="Typo.caption">TARGET: @(report?.TargetMassKg.ToString("N0") ?? "0") kg</MudText>
+                    </div>
+                    <MudProgressLinear Color="Color.Primary" Value="@(report?.Progress ?? 0)" Class="my-1" Size="Size.Small" />
+                </div>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+@code {
+    [Parameter] public List<NewLine> Lines { get; set; } = new();
+    [Parameter] public EventCallback<NewLine> OnLineSelect { get; set; }
+}

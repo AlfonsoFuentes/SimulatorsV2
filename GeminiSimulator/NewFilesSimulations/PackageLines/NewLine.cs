@@ -1,61 +1,94 @@
 ﻿using GeminiSimulator.DesignPatterns;
+using GeminiSimulator.Materials;
 using GeminiSimulator.NewFilesSimulations.BaseClasss;
 using GeminiSimulator.NewFilesSimulations.ManufactureEquipments;
 using GeminiSimulator.NewFilesSimulations.Operators;
 using GeminiSimulator.NewFilesSimulations.Tanks;
-using GeminiSimulator.PlantUnits.Lines;
 using GeminiSimulator.WashoutMatrixs;
 using QWENShared.Enums;
+using UnitSystem;
 
 namespace GeminiSimulator.NewFilesSimulations.PackageLines
 {
+
     public class NewLine : NewPlantUnit
     {
-        private readonly Dictionary<LineStateCategory, double> _stateAccumulator = new();
+        public bool IsWorkComplete =>
+        _productionQueue.Count == 0 && // No hay nada en cola
+        _currentOrder == null;
+        public List<ProductionOrderReport> OrderHistory { get; private set; } = new();
+
+        private List<NewMixer> _PreferedMixers = new();
+        public List<NewMixer> PreferedMixers => _PreferedMixers;
+
+        public void AddPreferedMixers(NewMixer preferedMixers)
+        {
+            _PreferedMixers.Add(preferedMixers);
+        }
+        public ProductionOrderReport? CurrentOrderReport { get; private set; }
         public WashoutMatrix WashoutRules { get; private set; }
-        public bool LineIsRunning => InletState is NewLineInletAvailable;
-        public Dictionary<LineStateCategory, double> StateAcumulator => _stateAccumulator;
+
         public ShiftType ShiftType { get; private set; }
         private Queue<ProductionOrder> _productionQueue = new();
         public int ProductionOrderCount => _productionQueue.Count;
+        public Queue<ProductionOrder> ProductionQueue => _productionQueue;
+        public NewPump? WashingPump { get; set; }
         public TimeSpan AuCheckInterval { get; private set; }
         public NewLine(Guid id, string name, ProcessEquipmentType type, FocusFactory focusFactory, TimeSpan auCheckInterval, WashoutMatrix _WashoutRules) : base(id, name, type, focusFactory)
         {
             AuCheckInterval = auCheckInterval;
             WashoutRules = _WashoutRules;
+
         }
         // En NewLine.cs
 
         protected override void AddSpecificReportData(List<NewInstantaneousReport> reportList)
         {
-            if (_currentOrder != null)
+            // Definimos un color neutro (el que use tu UI por defecto, usualmente negro o gris oscuro)
+            string neutral = "";
+            string alertRed = "#F44336";
+
+            if (_currentOrder != null && CurrentOrderReport != null)
             {
-                // 1. SKU ACTUAL
-                reportList.Add(new NewInstantaneousReport("SKU", _currentOrder.Material?.Name ?? "Unknown", IsBold: true, Color: "#E91E63"));
+                // 1. IDENTIDAD (Sin colores distractores)
+                reportList.Add(new NewInstantaneousReport("SKU Name", _currentOrder.SkuName, IsBold: true, Color: neutral));
+                reportList.Add(new NewInstantaneousReport("Material", CurrentOrderReport.MaterialName, Color: neutral));
+                reportList.Add(new NewInstantaneousReport("Source WIP", CurrentOrderReport.WipName, Color: neutral));
 
-                // 2. BARRA DE PROGRESO (Texto)
-                double produced = CurrentMasProduced;
-                double target = _currentOrder.MassToPack;
-                double pct = target == 0 ? 0 : (produced / target) * 100;
+                // 2. MASAS
+                double produced = CurrentOrderReport.ProducedMassKg;
+                double target = CurrentOrderReport.TargetMassKg;
+                double pending = Math.Max(0, target - produced);
 
-                reportList.Add(new NewInstantaneousReport("Progress", $"{pct:F1}%", IsBold: true, Color: pct > 90 ? "#4CAF50" : "#2196F3"));
+                reportList.Add(new NewInstantaneousReport("Target Mass", $"{target:N0} kg", Color: neutral));
+                reportList.Add(new NewInstantaneousReport("Packed", $"{produced:N1} kg", Color: neutral));
 
-                // 3. DETALLE DE KILOS
-                reportList.Add(new NewInstantaneousReport("Packed", $"{produced:F1} kg", Color: "#4CAF50"));
-                reportList.Add(new NewInstantaneousReport("Pending", $"{CurrentMassPending:F1} kg", Color: "#F44336"));
+                // ALERTA 1: Lo pendiente en ROJO (es el trabajo que falta por hacer)
+                reportList.Add(new NewInstantaneousReport("Pending", $"{pending:N1} kg", Color: neutral, IsBold: false));
 
-                // 4. VELOCIDAD ACTUAL
-                reportList.Add(new NewInstantaneousReport("Speed", $"{CurrentFlowRateKg:F2} kg/s", Color: "#607D8B"));
+                // 3. RENDIMIENTO
+                // ALERTA 2: Si la velocidad es 0, la marcamos en ROJO porque la línea está parada
+                string speedColor = CurrentFlowRateKg <= 0 ? alertRed : neutral;
+                reportList.Add(new NewInstantaneousReport("Speed", $"{CurrentFlowRateKg:F2} kg/s", Color: speedColor, IsBold: CurrentFlowRateKg <= 0));
+
+                // 4. TIEMPOS
+                if (CurrentFlowRateKg > 0)
+                {
+                    double secondsLeft = pending / CurrentFlowRateKg;
+                    var etc = TimeSpan.FromSeconds(secondsLeft);
+                    reportList.Add(new NewInstantaneousReport("Est. Finish", etc.ToString(@"hh\:mm\:ss"), Color: neutral));
+                }
             }
             else
             {
-                reportList.Add(new NewInstantaneousReport("Order", "No Active Order", Color: "#9E9E9E"));
+                // ALERTA 3: No hay orden activa (Línea ociosa)
+                reportList.Add(new NewInstantaneousReport("Order Status", "NO ACTIVE ORDER", Color: alertRed, IsBold: true));
             }
 
-            // 5. PRÓXIMA ORDEN
+            // El futuro siempre en un tono sutil (gris) para no confundir con el presente
             if (_nextOrder != null)
             {
-                reportList.Add(new NewInstantaneousReport("Next SKU", _nextOrder.Material?.Name ?? "Unknown", FontSize: "0.75rem", Color: "#9E9E9E"));
+                reportList.Add(new NewInstantaneousReport("Next in Queue", _nextOrder.SkuName, FontSize: "0.75rem", Color: "#9E9E9E"));
             }
         }
         public void AssignProductionPlan(IEnumerable<ProductionOrder> orders, IEnumerable<Guid> preferredMixers, ShiftType shift)
@@ -84,10 +117,36 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
 
         private ProductionOrder? _currentOrder;
         private ProductionOrder? _nextOrder;
-        public void AccumulateTime(LineStateCategory category, double seconds = 1.0)
+
+
+        // Variable interna para saber qué estamos haciendo ahora
+        public void AddProducingSecond(double mass)
         {
-            _stateAccumulator[category] += seconds;
+            if (CurrentOrderReport == null) return;
+            CurrentOrderReport.ProducingSeconds++;
+            CurrentOrderReport.ProducedMassKg += mass;
         }
+
+        public void AddInletStarvationSecond()
+        {
+            if (CurrentOrderReport != null) CurrentOrderReport.InletStarvationSeconds++;
+        }
+
+        public void AddInternalLossSecond()
+        {
+            if (CurrentOrderReport != null) CurrentOrderReport.InternalLossSeconds++;
+        }
+
+        public void AddChangeOverSecond()
+        {
+            if (CurrentOrderReport != null) CurrentOrderReport.ChangeOverSeconds++;
+        }
+
+        public void AddStandbySecond()
+        {
+            if (CurrentOrderReport != null) CurrentOrderReport.OutOfShiftSeconds++;
+        }
+
         public void ProductChange(DateTime InitialDate)
         {
             if (_productionQueue.Count == 0)
@@ -98,6 +157,11 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
 
             }
             GetNextOrder();
+            if (_currentOrder == null) return;
+
+
+            // Lo añadimos al historial de una vez para que sea visible en el Dashboard
+
             int currentShiftIndex = GetCurrentShiftIndex(InitialDate);
             bool isScheduledNow = IsLineScheduledForShift(currentShiftIndex, ShiftType);
             if (isScheduledNow)
@@ -114,6 +178,15 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
             var result = GetWipToProduce(_currentOrder!);
             CurrentWipTank = result.Wip;
             CurrentWipPump = result.Pump;
+            CurrentOrderReport = new ProductionOrderReport
+            {
+                OrderId = _currentOrder!.OrderId,
+                SkuName = _currentOrder.SkuName,
+                MaterialName = _currentOrder.Material?.Name ?? "Unknown",
+                TargetMassKg = _currentOrder.MassToPack,
+                OrderGoalSummary = $"{_currentOrder.PlannedCases} CASES OF {_currentOrder.SkuName}".ToUpper()
+            };
+            OrderHistory.Add(CurrentOrderReport);
             SendToWipCurrentOrder();
         }
         public NewWipTank? CurrentWipTank { get; private set; }
@@ -150,19 +223,20 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
         {
             if (CurrentWipTank == null) return;
             _currentOrder = null!;
-            CurrentWipTank.CurrentLine=null!;
+            CurrentWipTank.CurrentLine = null!;
             CurrentWipTank?.ReleaseAccess(this);
 
         }
         void SendToWipCurrentOrder()
         {
-            CurrentWipTank?.ReceiveOrderFromProductionLine(this,_currentOrder!.Material!, _currentOrder!.MassToPack);
+            CurrentWipTank?.ReceiveOrderFromProductionLine(this, _currentOrder!.Material!, _currentOrder!.MassToPack);
         }
         public override void CheckInitialStatus(DateTime InitialDate)
         {
             base.CheckInitialStatus(InitialDate);
+            WashingPump = Inputs.OfType<NewPump>().FirstOrDefault(x => x.IsForWashing);
             ProductChange(InitialDate);
-           
+
         }
 
         public void GetNextOrder()
@@ -212,12 +286,60 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
             _currentflowRateKg = _flowRateKgPerSec;
             CurrentWipPump?.SetCurrentFlow(_currentflowRateKg);
             _currentMasProduced += _currentflowRateKg;
+
+        }
+        // En NewLine.cs
+
+        // Dentro de NewLine.cs
+
+        public override void ExecuteProcess()
+        {
+            // Solo registramos si hay una orden activa
+            if (CurrentOrderReport != null)
+            {
+                CurrentOrderReport.WipLevelKg = CurrentWipTank?.CurrentLevel.GetValue(MassUnits.KiloGram) ?? 0;
+                // 1. CAPTURA DE ESTADOS GLOBALES (Viene de NewPlantUnit)
+                if (!GlobalState.IsOperational)
+                {
+                    // Si es por mantenimiento o parada programada
+                    if (GlobalState is GlobalState_Maintenance || IsOnPlannedBreak(CurrentDate))
+                    {
+                        CurrentOrderReport.PlannedDownTimeSeconds++;
+                        StopFlow(); // Función neutral para detener bombas
+                    }
+                    // Si la línea está bien pero un equipo externo la bloquea
+                    else if (GlobalState is GlobalState_MasterWaiting waitingState)
+                    {
+                        // Verificamos si el recurso que esperamos es la Bomba de Lavado
+                        if (OutletState is NewConcurrentChangeoverState || OutletState is NewWashingOnlyState)
+                        {
+                            CurrentOrderReport.WashingPumpWaitSeconds++;
+                        }
+                        else
+                        {
+                            CurrentOrderReport.BlockedByResourceSeconds++;
+                        }
+                        StopFlow();
+                    }
+                }
+            }
+
+            // 2. EJECUCIÓN DE ESTADOS OPERACIONALES (Inlet/Outlet)
+            // base.ExecuteProcess() llamará al Calculate() de tus estados actuales
+            base.ExecuteProcess();
         }
 
+        // Método auxiliar neutral para detener el flujo físico
+        public void StopFlow()
+        {
+            _currentflowRateKg = 0;
+            CurrentWipPump?.SetCurrentFlow(0);
+        }
         public void NotProduce()
         {
             _currentflowRateKg = 0;
             CurrentWipPump?.SetCurrentFlow(_currentflowRateKg);
+
         }
         private void CalculateCurrentOrderRequirements()
         {
@@ -266,21 +388,10 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
         }
         public ProductionOrder? CurrentOrder => _currentOrder;
         public ProductionOrder? NextOrder => _nextOrder;
-        void CheckReinitProductionAtInlet()
+        public bool NeedsWashing(ProductDefinition? _last, ProductDefinition? _new)
         {
-            int currentShiftIndex = GetCurrentShiftIndex(CurrentDate);
-            bool isScheduledNow = IsLineScheduledForShift(currentShiftIndex, ShiftType);
-
-            if (isScheduledNow)
-            {
-                TransitionInletState(new NewLineInletAvailable(this));
-            }
-            else
-            {
-                // Si el break terminó justo cuando también terminaba el turno,
-                // pasamos al estado de espera de personal.
-                TransitionInletState(new NewOutOfShiftState(this));
-            }
+            if (_last == null || _new == null) return false;
+            return _last.Id != _new.Id;
         }
 
 

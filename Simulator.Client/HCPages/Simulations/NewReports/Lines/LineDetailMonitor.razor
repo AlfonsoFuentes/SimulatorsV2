@@ -1,0 +1,140 @@
+﻿@using MudBlazor
+@using GeminiSimulator.NewFilesSimulations.PackageLines
+
+
+<MudGrid Spacing="2">
+    @* BLOQUE 1: ACTIVE PRODUCTION *@
+    <MudItem xs="12">
+        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; border-top: 4px solid #594ae2;">
+            <MudText Typo="Typo.h6" Style="font-weight: 900; color: #594ae2;" Class="mb-3">
+                ACTIVE PRODUCTION: @(Line.CurrentOrderReport?.OrderGoalSummary ?? "WAITING")
+            </MudText>
+            
+            <MudGrid Spacing="1">
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.caption" Style="color: #78909c; font-weight: 700;">SKU NAME</MudText>
+                    <MudText Typo="Typo.body2" Style="font-weight: 700;">@Line.CurrentOrderReport?.SkuName</MudText>
+                </MudItem>
+                <MudItem xs="3" md="2">
+                    <MudText Typo="Typo.caption" Style="color: #78909c; font-weight: 700;">PACKED</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Success" Style="font-weight: 900;">@Line.CurrentOrderReport?.ProducedMassKg.ToString("N1") kg</MudText>
+                </MudItem>
+                <MudItem xs="3" md="2">
+                    <MudText Typo="Typo.caption" Style="color: #78909c; font-weight: 700;">PENDING</MudText>
+                    <MudText Typo="Typo.body1" Style="color: #594ae2; font-weight: 900;">@((Line.CurrentOrderReport?.TargetMassKg - Line.CurrentOrderReport?.ProducedMassKg)?.ToString("N1") ?? "0") kg</MudText>
+                </MudItem>
+                <MudItem xs="6" md="2">
+                    <MudText Typo="Typo.caption" Style="color: #78909c; font-weight: 700;">LINE SPEED</MudText>
+                    <MudText Typo="Typo.body2" Style="font-weight: 800;">@Line.CurrentFlowRateKg.ToString("F2") kg/s</MudText>
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.caption" Style="color: #78909c; font-weight: 700;">CURRENT STATE</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="pa-0 ma-0" Style="font-weight: 800;">
+                        @Line.State.ToUpper()
+                    </MudChip>
+                </MudItem>
+            </MudGrid>
+
+            <div class="mt-3">
+                <MudText Typo="Typo.caption" Style="font-weight: 700;">PROGRESS: @Line.CurrentOrderReport?.Progress.ToString("F1")%</MudText>
+                <MudProgressLinear Color="Color.Success" Value="@(Line.CurrentOrderReport?.Progress ?? 0)" Size="Size.Medium" Class="rounded-sm mt-1" />
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    @* BLOQUE 2: LINE QUEUE (TABULAR) *@
+    <MudItem xs="12">
+        <MudPaper Elevation="1" Class="pa-4" Style="background-color: #fafafa; border-radius: 8px;">
+            <MudText Typo="Typo.subtitle2" Style="font-weight: 900; color: #546e7a;" Class="mb-2">UPCOMING IN LINE QUEUE</MudText>
+            <MudTable Items="@Line.ProductionQueue" Dense="true" Hover="true" Elevation="0" Class="mt-1" Bordered="false">
+                <HeaderContent>
+                    <MudTh><MudText Typo="Typo.caption" Style="font-weight: 900;">SKU NAME</MudText></MudTh>
+                    <MudTh><MudText Typo="Typo.caption" Style="font-weight: 900;">MATERIAL</MudText></MudTh>
+                    <MudTh><MudText Typo="Typo.caption" Style="font-weight: 900; text-align: right;">TARGET (KG)</MudText></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><MudText Typo="Typo.caption" Style="font-weight: 700;">@context.SkuName</MudText></MudTd>
+                    <MudTd><MudText Typo="Typo.caption">@context.Material?.Name</MudText></MudTd>
+                    <MudTd Style="text-align: right;"><MudText Typo="Typo.caption">@context.MassToPack.ToString("N0")</MudText></MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+
+    @* BLOQUE 3: WIP VITALITY *@
+    <MudItem xs="12" md="4">
+        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; height: 100%; border-left: 5px solid #FF9800;">
+            <MudText Typo="Typo.h6" Style="font-weight: 900;" Class="mb-3">WIP VITALITY</MudText>
+            <div class="d-flex flex-column align-center">
+                <MudText Typo="Typo.h5" Style="font-weight: 900; color: #FF9800;">
+                    @Line.CurrentWipTank?.CurrentLevel.GetValue(MassUnits.KiloGram).ToString("N0") <span style="font-size: 0.8rem;">KG</span>
+                </MudText>
+                <MudProgressLinear Color="Color.Warning" Value="@(Line.CurrentWipTank?.CurrentLevel.GetValue(MassUnits.KiloGram) ?? 0)" Max="5000" Size="Size.Small" Class="w-100 mt-2" />
+                <div class="mt-4 w-100 pa-2" style="background-color: #fff3e0; border-radius: 6px; text-align: center;">
+                    <MudText Typo="Typo.caption" Style="font-weight: 800; color: #e65100;">STRATEGIC LIFE</MudText>
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: 900; color: #d32f2f;">@GetStrategicTime()</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    @* BLOQUE 4: SUPPLY CHAIN *@
+    <MudItem xs="12" md="8">
+        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; height: 100%; border-left: 5px solid #594ae2;">
+            <MudText Typo="Typo.h6" Style="font-weight: 900;" Class="mb-2">SUPPLY CHAIN</MudText>
+            
+            <div class="pa-3 mb-3" style="background-color: #f3f0ff; border-radius: 8px;">
+                @if (Line.CurrentWipTank?.AssignedMixer != null)
+                {
+                    var m = Line.CurrentWipTank.AssignedMixer;
+                    <div class="d-flex justify-space-between align-end mb-1">
+                        <div>
+                            <MudText Typo="Typo.caption" Style="font-weight: 900; color: #594ae2; display: block;">FEEDING NOW: @m.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: 700; color: #7e57c2;">ACTIVITY: @m.StatusMessage</MudText>
+                        </div>
+                        <div style="text-align: right;">
+                            <MudText Typo="Typo.caption" Style="font-weight: 900;">@m.CurrentLevel.GetValue(MassUnits.KiloGram).ToString("N0") kg</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: 700; color: #594ae2;" Class="ml-2">@m.Progress.ToString("F0")%</MudText>
+                        </div>
+                    </div>
+                    <MudProgressLinear Color="Color.Info" Value="@m.Progress" Size="Size.Small" />
+                }
+                else
+                {
+
+                    <MudText Typo="Typo.caption" Style="font-style: italic;">No active manufacture discharge...</MudText>
+                }
+            </div>
+
+            <MudText Typo="Typo.caption" Style="font-weight: 900; color: #546e7a;" Class="mb-1">BATCH QUEUE (WAITING)</MudText>
+            <div class="mt-1" style="max-height: 100px; overflow-y: auto;">
+                @if (Line.CurrentWipTank?.MixerQueue?.Any(x => x != Line.CurrentWipTank.AssignedMixer) == true)
+                {
+                    @foreach (var mixer in Line.CurrentWipTank.MixerQueue.Where(x => x != Line.CurrentWipTank.AssignedMixer))
+                    {
+                        <div class="d-flex justify-space-between align-center pa-2 mb-1" style="background-color: #f5f5f5; border-radius: 4px;">
+                            <MudText Typo="Typo.caption" Style="font-weight: 800;">@mixer.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: 700;">IN PROCESS: @mixer.CurrentLevel.GetValue(MassUnits.KiloGram).ToString("N0") kg</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">QUEUED</MudChip>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Class="mt-2" Style="display:block; color: #bdbdbd;">No mixers in upstream queue</MudText>
+                }
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public NewLine Line { get; set; } = null!;
+    private string GetStrategicTime()
+    {
+        if (Line.CurrentWipTank == null) return "00:00:00";
+        var seconds = Line.CurrentWipTank.PendingTimeEmptyMassInProcess.GetValue(TimeUnits.Second);
+        var t = TimeSpan.FromSeconds(seconds);
+        return string.Format("{0:D2}h:{1:D2}m:{2:D2}s", t.Hours, t.Minutes, t.Seconds);
+    }
+}

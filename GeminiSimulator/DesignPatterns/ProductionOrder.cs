@@ -11,12 +11,13 @@ namespace GeminiSimulator.DesignPatterns
 
     public class ProductionOrder
     {
-
+         
+        public Guid OrderId {  get; set; }=Guid.NewGuid();
         public string SkuName => SKU?.Name ?? string.Empty;
         public int OrderSequence { get; private set; } // Orden de ejecución
 
         // --- DATOS DEL PLAN (Vienen del PlannedSKUDTO) ---
-        private int PlannedCases { get; set; }
+        public int PlannedCases { get; set; }
         private Amount LineSpeed { get; set; }    // Velocidad específica del plan
         private double UnitWeight => SKU?.UnitWeight.GetValue(MassUnits.KiloGram) ?? 0;
         private int UnitsPerCase => SKU?.UnitsPerCase ?? 0;

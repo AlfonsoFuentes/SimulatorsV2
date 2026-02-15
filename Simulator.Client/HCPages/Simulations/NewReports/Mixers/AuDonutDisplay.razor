@@ -1,0 +1,17 @@
+﻿@using MudBlazor
+
+<MudPaper Elevation="0" Class="pa-2 d-flex flex-column align-center justify-center mb-2" Style="border: 2px solid var(--mud-palette-lines-default); border-radius: 8px;">
+    <MudText Typo="Typo.subtitle1" Style="font-weight: 900; text-transform: uppercase;">@Title</MudText>
+    <div style="position: relative; width: 180px; height: 180px;">
+        <MudChart ChartType="ChartType.Donut" InputData="@(new[] { AuValue, 100 - AuValue })" Width="100%" Height="100%" ChartOptions="@(new ChartOptions { ChartPalette = new[] { "var(--mud-palette-success)", "var(--mud-palette-error)" }, ShowLegend = false })" />
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+            <MudText Typo="Typo.h5" Style="@($"font-weight: 900; color: {(AuValue < 75 ? "var(--mud-palette-error)" : "var(--mud-palette-success)")};")">@AuValue.ToString("F0")%</MudText>
+            <MudText Typo="Typo.caption" Style="font-weight: 900;">PRODUCING</MudText>
+        </div>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public double AuValue { get; set; }
+}

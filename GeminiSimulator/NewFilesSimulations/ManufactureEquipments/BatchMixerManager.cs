@@ -1,91 +1,89 @@
 ﻿using GeminiSimulator.Materials;
 using GeminiSimulator.NewFilesSimulations.BaseClasss;
+using GeminiSimulator.NewFilesSimulations.Context;
 using GeminiSimulator.NewFilesSimulations.Operators;
 using GeminiSimulator.NewFilesSimulations.Tanks;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+using QWENShared.Enums;
 using UnitSystem;
 
 namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
 {
+    public enum MixerStateCategory
+    {
+        Producing,          // Mezclando / Agitando
+        WaitingIngredients, // Esperando carga de materia prima
+        Mixing,            // Alcanzando temperatura
+        Analisys,
+        ConnectToWip,            // Enfriamiento
 
+        StarvedByPump,      // Bloqueado por falta de bomba
+        StarvedByWashingPump,      // Bloqueado por falta de bomba
+
+    }
     public abstract class NewStepLink
     {
-        protected readonly NewBatchManager _manager;
-        protected DateTime? _fixedPlannedInit;
-        public BatchOrder ParentOrder { get; set; }
-        public NewStepLink? PreviousStep { get; set; } // Set público para armar la cadena
-        public NewStepLink? NextStep { get; set; }
+        public string BatchName { get; set; } = "";
         public virtual string ResourceName => "N/A";
-        public double DurationSeconds { get; }
-        public double AccumulatedStarvation { get; set; }
-        public double RealDurationSeconds => DurationSeconds + AccumulatedStarvation;
+        protected readonly NewBatchManager _manager;
+        public StepTimeManager TimeManager { get; private set; }
+        //public BatchOrder ParentOrder { get; set; }
+        public NewStepLink? PreviousStep { get; set; }
+        public NewStepLink? NextStep { get; set; }
+
+        public DateTime CurrentDate => _manager.CurrentDate;
         public string MixerName => _manager.MixerName;
 
-        protected NewStepLink(NewBatchManager manager, BatchOrder order, double duration)
+        // Propiedades redirigidas para el reporte
+        public double TheoricalDurationSeconds => TimeManager.TheoreticalDuration;
+        public double AccumulatedStarvation => TimeManager.StarvationSeconds;
+        public double RealDurationSeconds => TimeManager.WorkedSeconds;
+        public DateTime PlannedInit => TimeManager.StartDate;
+        public DateTime PlannedEnd => TimeManager.ExpectedEndDate;
+
+        protected NewStepLink(NewBatchManager manager, double duration)
         {
             _manager = manager;
-            DurationSeconds = duration;
-            ParentOrder = order;
+            //ParentOrder = order;
+            TimeManager = new StepTimeManager(this, duration);
         }
 
+        // Delega la responsabilidad al StepTimeManager
+        public void SetFixedStart(DateTime date) => TimeManager.SetFixedStart(date);
 
-        public void SetFixedStart(DateTime date) => _fixedPlannedInit = date;
-
-        // LÓGICA DE EMPUJE (Chain of Responsibility)
-        public virtual DateTime PlannedInit
-        {
-            get
-            {
-                if (_fixedPlannedInit.HasValue) return _fixedPlannedInit.Value;
-
-                // Si no hay anterior, usamos la fecha actual del simulador
-                DateTime baseDate = PreviousStep?.PlannedEnd ?? _manager._mixer.CurrentDate;
-                return CalculateAvailability(baseDate);
-            }
-        }
-
-        public DateTime PlannedEnd => PlannedInit.AddSeconds(RealDurationSeconds);
-
-        protected virtual DateTime CalculateAvailability(DateTime baseDate) => baseDate;
-
-        public abstract string GetStatusMessage();
-        public abstract string GetSubStatusMessage();
-
-        // TEMPLATE METHOD
         public void CalculateStep(DateTime currentDate)
         {
-
+            TimeManager.AddWork(1);
             CalculateInternal(currentDate);
 
             if (CheckStepComplete())
             {
-                SetNextStep();
+                TimeManager.CloseStep(currentDate);
+                _manager.SelectNextStep();
             }
         }
 
         public abstract void CalculateInternal(DateTime currentDate);
         public abstract bool CheckStepComplete();
         public abstract bool PrepareStep();
-
-        public void SetNextStep()
+        public abstract string GetStatusMessage();
+        public abstract string GetSubStatusMessage();
+        public void AddStarvation()
         {
-            _manager.SelectNextStep();
+            TimeManager.AddStarvation();
         }
     }
+
+
     public class StepOperator : NewStepLink
     {
-        private readonly NewMixer _mixer;
+        private NewMixer _mixer => _manager.Mixer;
         private readonly string _taskName;
-
-        public StepOperator(NewBatchManager manager, NewMixer mixer, BatchOrder order, string taskName, double duration)
-            : base(manager, order, duration)
+        public override string ResourceName => _mixer.AssignedOperator?.Name ?? "N/A";
+        public StepOperator(NewBatchManager manager, string taskName, double duration)
+            : base(manager, duration)
         {
-            _mixer = mixer;
+
             _taskName = taskName;
         }
 
@@ -114,10 +112,7 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
         public override bool PrepareStep()
         {
             // 1. Si el compromiso es infinito, no necesitamos este "paso de captura"
-            if (_mixer._OperatorOperationType == OperatorEngagementType.Infinite)
-            {
-                return false; // SKIP: Ya tenemos operario para siempre
-            }
+
 
             // 2. Si ya lo tenemos capturado de un paso anterior
             if (_mixer.AssignedOperator?.CurrentOwner == _mixer)
@@ -128,16 +123,20 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
             // 3. Si el operario existe pero no es nuestro, entramos en espera
             if (_mixer.AssignedOperator != null)
             {
-                _mixer.AssignedOperator.Reserve(_mixer);
+                if (!_mixer.AssignedOperator!.RequestAccess(_mixer))
+                {
+                    _mixer.AssignedOperator.Reserve(_mixer);
 
-                // IMPORTANTE: Transicionamos el estado global del Mixer.
-                // Esto detiene el Calculate() del Manager.
-                _mixer.TransitionGlobalState(
-                    new GlobalState_MasterWaiting(_mixer, _mixer.AssignedOperator)
-                );
+                    // IMPORTANTE: Transicionamos el estado global del Mixer.
+                    // Esto detiene el Calculate() del Manager.
+                    _mixer.TransitionGlobalState(
+                        new GlobalState_MasterWaiting(_mixer, _mixer.AssignedOperator)
+                    );
+                    return true;
+                }
 
-                // Devolvemos TRUE: "Este paso es válido y debe quedarse como CurrentStep"
-                return true;
+
+
             }
 
             // Si no hay operario asignado al mixer en absoluto, saltamos
@@ -147,14 +146,14 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
 
     public class StepWashing : NewStepLink
     {
-        NewMixer _mixer;
+        NewMixer _mixer => _manager.Mixer;
         double TargetTime = 0;
         double currentTime = 0;
         public override string ResourceName => _mixer.WashingPump?.Name ?? "No Wash Pump";
         double PendTime => TargetTime - currentTime;
-        public StepWashing(NewBatchManager manager, NewMixer mixer, BatchOrder order, double duration) : base(manager, order, duration)
+        public StepWashing(NewBatchManager manager, double duration) : base(manager, duration)
         {
-            _mixer = mixer;
+
         }
 
 
@@ -206,15 +205,17 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
     }
     public class StepTiming : NewStepLink
     {
-        NewMixer _mixer;
+        NewMixer _mixer => _manager.Mixer;
         double TargetTime = 0;
         double currentTime = 0;
         double PendTime => TargetTime - currentTime;
         RecipeStep _step;
         int _totalSteps = 0;
-        public StepTiming(NewBatchManager manager, NewMixer mixer, RecipeStep step, BatchOrder order, int totalsteps, double duration) : base(manager, order, duration)
+        public override string ResourceName => $"{StepType}";
+        public BackBoneStepType StepType => _step.OperationType;
+        public StepTiming(NewBatchManager manager, RecipeStep step, int totalsteps, double duration) : base(manager, duration)
         {
-            _mixer = mixer;
+
             _step = step;
             _totalSteps = totalsteps;
         }
@@ -252,7 +253,7 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
     public class StepMass : NewStepLink
     {
         public override string ResourceName => InletPump?.Name ?? "Manual / No Pump";
-        NewMixer _mixer;
+        NewMixer _mixer => _manager.Mixer;
         double TargetTime = 0;
         double currentTime = 0;
         double PendTime => TargetTime - currentTime;
@@ -264,9 +265,9 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
         NewPump? InletPump;
         double pumpFlow => InletPump?.NominalFlowRate.GetValue(MassFlowUnits.Kg_sg) ?? TargetMass;
         double batchSize = 0;
-        public StepMass(NewBatchManager manager, NewMixer mixer, RecipeStep step, BatchOrder order, int totalsteps, double BatchSize, double duration) : base(manager, order, duration)
+        public StepMass(NewBatchManager manager, RecipeStep step, int totalsteps, double BatchSize, double duration) : base(manager, duration)
         {
-            _mixer = mixer;
+
             _step = step;
             _totalSteps = totalsteps;
             TargetTime = duration;
@@ -280,7 +281,8 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
             double currentFlow = PendingMass > pumpFlow ? pumpFlow : PendingMass;
             InletPump?.SetCurrentFlow(currentFlow);
             currentMass += currentFlow;
-            _mixer._currentLevel += currentFlow;
+            double currentLevel = _mixer.CurrentLevel.GetValue(MassUnits.KiloGram);
+            _mixer.SetCurrentLevel(currentLevel + currentFlow);
             InletPump?.SetRemainingSeconds(PendTime + AccumulatedStarvation);
         }
 
@@ -345,31 +347,38 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
                         new GlobalState_MasterWaiting(_mixer, InletPump)
                     );
                 }
+                return true;
             }
             //CASO B: la adicion es manual ejecuta el paso manual
+            var operatorsManageMaterial = _mixer.AssignedOperator?.SupportedProducts.Any(prod => prod.Id == ingredientId) ?? false;
+            if (!operatorsManageMaterial)
+            {
+                Console.WriteLine($"Error en mixer {_mixer.Name} no maneja {_step.IngredientName}");
+            }
 
             return true;
         }
+
     }
     public class StepDischargeToVessel : NewStepLink
     {
-        NewMixer _mixer;
+        NewMixer _mixer => _manager.Mixer;
         double TargetTime = 0;
         double currentTime = 0;
         double PendTime => TargetTime - currentTime;
-
+        public override string ResourceName => OuletPump?.Name ?? "N/A";
 
         double TargetMass = 0;
         double currentMass = 0;
         double PendingMass => TargetMass - currentMass;
         NewPump? OuletPump => _mixer.OutletPump;
         double pumpFlow => OuletPump?.NominalFlowRate.GetValue(MassFlowUnits.Kg_sg) ?? 0;
-        NewRecipedInletTank? _DestinationVessel;
-        public StepDischargeToVessel(NewBatchManager manager, NewMixer mixer, BatchOrder order, double duration) : base(manager, order, duration)
+        NewRecipedInletTank _DestinationVessel;
+        public StepDischargeToVessel(NewBatchManager manager, NewRecipedInletTank DestinationVessel, double duration) : base(manager, duration)
         {
-            _mixer = mixer;
-            _DestinationVessel = mixer.DestinationVessel;
-            TargetTime = DurationSeconds;
+            _DestinationVessel = DestinationVessel;
+
+            TargetTime = TheoricalDurationSeconds;
 
         }
 
@@ -380,22 +389,24 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
             double currentFlow = PendingMass > pumpFlow ? pumpFlow : PendingMass;
 
             OuletPump?.SetCurrentFlow(currentFlow);
-            _mixer.DestinationVessel?.SetInletFlow(currentFlow);
-            _mixer._currentLevel -= currentFlow;
+            _DestinationVessel?.SetInletFlow(currentFlow);
+            double currentlevel = _mixer.CurrentLevel.GetValue(MassUnits.KiloGram);
+            _mixer.SetCurrentLevel(currentlevel - currentFlow);
             currentMass += currentFlow;
 
         }
 
         public override bool CheckStepComplete()
         {
-            if (_mixer._currentLevel <= 0)
+            if (_mixer.CurrentLevel.GetValue(MassUnits.KiloGram) <= 0.001)
             {
+                OuletPump?.SetCurrentFlow(0);
                 _DestinationVessel?.SetInletFlow(0);
                 _DestinationVessel?.ReleaseAccess(_mixer);
                 _mixer.LastMaterialProcessed = _mixer.CurrentMaterial;
-                _mixer._currentLevel = 0;
+                _mixer.SetCurrentLevel(0);
                 _mixer.CurrentMaterial = null;
-                _mixer.RealeaseWipQueue();
+                _DestinationVessel!.ReceiveStopDischargFromMixer();
                 return true;
             }
             return false;
@@ -409,12 +420,12 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
         public override string GetSubStatusMessage() => $"{currentMass:F0} / {TargetMass:F0} Kg";
         public override bool PrepareStep()
         {
-            if (_mixer._OperatorOperationType == OperatorEngagementType.FullBatch)
+            if (_mixer.AssignedOperator?.CurrentOwner == _mixer)
             {
                 _mixer.AssignedOperator?.ReleaseAccess(_mixer);
             }
             if (_DestinationVessel == null) return false;
-            TargetMass = _mixer._currentLevel;
+            TargetMass = _mixer.CurrentLevel.GetValue(MassUnits.KiloGram);
 
             if (!_DestinationVessel.RequestAccess(_mixer))
             {
@@ -433,204 +444,397 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
             return true;
         }
     }
+
     public class NewBatchManager
     {
-        public NewMixer _mixer;
-        public string MixerName => _mixer.Name;
-        public NewStepLink? CurrentStep { get; private set; }
 
+        public string MixerName => _mixer.Name;
+        public NewMixer Mixer => _mixer;
         public DateTime CurrentDate => _mixer.CurrentDate;
-        public Queue<NewStepLink> ActivePipeline = new Queue<NewStepLink>();
-        public Queue<NewStepLink> ExecutionHistory = new Queue<NewStepLink>();
-        public NewBatchManager(NewMixer mixer)
+        private readonly NewMixer _mixer;
+
+        public NewStepLink? _CurrentStep { get; private set; }
+        public Queue<BatchOrder> BatchQueue { get; set; } = new();
+        BatchOrder? _CurrentBatch;
+
+        public Queue<NewStepLink> ActivePipeline => _CurrentBatch?.ActivePipeline ?? new();
+        public Queue<NewStepLink> BatchRecordHistory => _CurrentBatch?.BatchRecordHistory ?? new();
+        public Queue<BatchOrder> BatchRecord { get; set; } = new();
+        TransferBatchToMixerCalculation _TransferBatchToMixerCalculation;
+        OperatorEngagementType _OperatorEngagementType;
+        Amount _OperatorTimeDisabled = null!;
+        public void SetTransferBatchToMixerCalculation(TransferBatchToMixerCalculation transferBatchToMixerCalculation)
+        {
+            _TransferBatchToMixerCalculation = transferBatchToMixerCalculation;
+        }
+        public NewBatchManager(NewMixer mixer, TransferBatchToMixerCalculation TransferBatchToMixerCalculation, OperatorEngagementType OperatorEngagementType, Amount OperatorTimeDisabled)
         {
             _mixer = mixer;
+            _TransferBatchToMixerCalculation = TransferBatchToMixerCalculation;
+            _OperatorEngagementType = OperatorEngagementType;
+            _OperatorTimeDisabled = OperatorTimeDisabled;
         }
 
-        public void SelectNextStep()
-        {
-            if (ActivePipeline.TryDequeue(out var completed))
-            {
-                ExecutionHistory.Enqueue(completed);
 
-                // LA VERDAD ABSOLUTA: El momento exacto del relevo es AHORA.
-                DateTime now = _mixer.CurrentDate;
-
-                if (ActivePipeline.TryPeek(out var nextActivity))
-                {
-                    CurrentStep = nextActivity;
-                    // Le decimos al siguiente: "El pasado ya pasó. Tu realidad empieza AHORA".
-                    CurrentStep.SetFixedStart(now);
-                    if (!CurrentStep.PrepareStep())
-                    {
-                        SelectNextStep();
-                    }
-                }
-                else
-                {
-                    _mixer.ReceiveStopCommand();
-                }
-            }
-
-        }
 
 
         public void Calculate()
         {
-            if (CurrentStep != null)
+            if (_CurrentStep != null)
             {
-                CurrentStep.CalculateStep(_mixer.CurrentDate);
+                _CurrentStep.CalculateStep(_mixer.CurrentDate);
 
-                // Actualizamos las métricas del lote en curso en cada tick
-                // para que el usuario vea el "BatchReal" crecer en tiempo real.
-                UpdateOrderMetrics(CurrentStep.ParentOrder);
+
             }
         }
 
-        public string GetGlobalStatus() => CurrentStep?.GetStatusMessage() ?? "IDLE";
-        public void AddOrder(ProductDefinition product, ProductDefinition? lastMaterial, NewRecipedInletTank DestinationVessel)
+        int BatchOrder = 0;
+        public void AddOrder(NewRecipedInletTank destinationVessel, ProductDefinition? lastMaterial)
         {
-            double batchSize = _mixer.ProductCapabilities[product].GetValue(MassUnits.KiloGram);
-            var newOrderContext = new BatchOrder
-            {
-                BackBone = product,
-                TargetBatchSize = batchSize
-            };
-            // 1. Obtener el último paso si existe para encadenar
-            NewStepLink? lastStep = ActivePipeline.Count > 0 ? ActivePipeline.Last() : null;
+            // 1. Validaciones de integridad
+            if (!ReviewIntegrityDataToCreateOrder(_mixer, destinationVessel, destinationVessel.CurrentMaterial!)) return;
 
-            // 2. Definir una función local para automatizar el encadenamiento
-            NewStepLink EnqueueStep(NewStepLink newStep)
+            var product = destinationVessel.CurrentMaterial!;
+            BatchOrder++;
+            // 2. Creamos la entidad de la Orden
+            var newOrder = new BatchOrder(_mixer, destinationVessel);
+
+            // --- EL GANCHO DE TIEMPO (Crucial) ---
+            // Buscamos el último eslabón de la cadena actual:
+            // Puede estar al final de la cola de espera o ser el último del lote que está corriendo.
+            var globalLastOrder = BatchQueue.LastOrDefault() ?? _CurrentBatch;
+            // Devuelve el NewStepLink que tiene la fecha de fin más lejana
+            NewStepLink? globalTail = globalLastOrder?.Steps.MaxBy(s => s.PlannedEnd);
+
+            // 3. Función interna para construir la cadena
+            void EnqueueStep(NewStepLink newStep)
             {
-                if (lastStep != null)
+                if (globalTail != null)
                 {
-                    lastStep.NextStep = newStep;
-                    newStep.PreviousStep = lastStep;
+                    // Creamos el puente físico entre pasos (incluso de órdenes distintas)
+                    globalTail.NextStep = newStep;
+                    newStep.PreviousStep = globalTail;
                 }
-                ActivePipeline.Enqueue(newStep);
-                lastStep = newStep;
-                return newStep;
+                newStep.BatchName = $"{_mixer.Name}-{BatchOrder}";
+                // Registramos en ambas estructuras de la orden
+                newOrder.Steps.Add(newStep);             // Para métricas (BCT)
+                newOrder.ActivePipeline.Enqueue(newStep); // Para ejecución (SelectNextStep)
+
+                // El nuevo paso se convierte en la nueva "cola" para el siguiente
+                globalTail = newStep;
             }
 
-            // 3. CONSTRUCCIÓN DE LA SECUENCIA
-            // A. El Operario toma el mando
-            EnqueueStep(new StepOperator(this, _mixer, newOrderContext, "Setup Batch", 0));
+            // --- 4. CONSTRUCCIÓN DE LA SECUENCIA FÍSICA ---
 
-            // B. Lavado (si aplica)
-            double washoutTime = 0;
+            // A. Setup (Operario)
+            if (_OperatorEngagementType != OperatorEngagementType.Infinite)
+            {
+                EnqueueStep(new StepOperator(this, "Setup Batch", 0));
+            }
+
+            // B. Lavado (Si aplica)
             if (_mixer.NeedsWashing(lastMaterial, product))
             {
-                washoutTime = _mixer.WashoutRules
-                   .GetMixerWashout(lastMaterial!.Category, product.Category)
-                   .GetValue(TimeUnits.Second);
+                double washTime = _mixer.WashoutRules
+                    .GetMixerWashout(lastMaterial!.Category, product.Category)
+                    .GetValue(TimeUnits.Second);
+                EnqueueStep(new StepWashing(this, washTime));
             }
-            EnqueueStep(new StepWashing(this, _mixer, newOrderContext, washoutTime));
 
-            // C. Receta
-            int total = product.RecipeSteps.Count;
-            foreach (var stepRecipe in product.RecipeSteps.OrderBy(x => x.Order))
+            // C. Pasos de Receta
+            int totalRecipeSteps = product.RecipeSteps.Count;
+            foreach (var recipeStep in product.RecipeSteps.OrderBy(x => x.Order))
             {
-                if (stepRecipe.OperationType == QWENShared.Enums.BackBoneStepType.Add)
+                double duration = recipeStep.Duration.GetValue(TimeUnits.Second);
+
+                if (recipeStep.OperationType == QWENShared.Enums.BackBoneStepType.Add)
                 {
-                    EnqueueStep(new StepMass(this, _mixer, stepRecipe, newOrderContext, total, batchSize, stepRecipe.Duration.GetValue(TimeUnits.Second)));
+                    EnqueueStep(new StepMass(this, recipeStep, totalRecipeSteps, newOrder.TargetBatchSize, duration));
                 }
                 else
                 {
-                    EnqueueStep(new StepTiming(this, _mixer, stepRecipe, newOrderContext, total, stepRecipe.Duration.GetValue(TimeUnits.Second)));
+                    if (recipeStep.OperationType != BackBoneStepType.Connect_Mixer_WIP)
+                    {
+                        EnqueueStep(new StepTiming(this, recipeStep, totalRecipeSteps, duration));
+                    }
+                    else if (_TransferBatchToMixerCalculation == TransferBatchToMixerCalculation.Manual)
+                    {
+                        if (destinationVessel is NewWipTank wipTank)
+                        {
+                            if (wipTank.ProcesedBatchQueue.Any())
+                            {
+                                var lastBatchinWIP = wipTank.ProcesedBatchQueue.Last();
+                                if (lastBatchinWIP != null && lastBatchinWIP.Product != product)
+                                {
+                                    EnqueueStep(new StepTiming(this, recipeStep, totalRecipeSteps, duration));
+                                }
+                            }
+                            else
+                            {
+                                EnqueueStep(new StepTiming(this, recipeStep, totalRecipeSteps, duration));
+                            }
+
+                        }
+                        else
+                        {
+                            EnqueueStep(new StepTiming(this, recipeStep, totalRecipeSteps, duration));
+                        }
+                    }
+
                 }
             }
 
             // D. Descarga
+            double transferTime = _mixer._DischargeRate == 0 ? 0 : newOrder.TargetBatchSize / _mixer._DischargeRate;
+            EnqueueStep(new StepDischargeToVessel(this, destinationVessel, transferTime));
 
-            double transferTime = _mixer._DischargeRate == 0 ? 0 : batchSize / _mixer._DischargeRate;
-            EnqueueStep(new StepDischargeToVessel(this, _mixer, newOrderContext, transferTime));
-
-            // 4. ACTIVACIÓN INICIAL
-            // Si no hay nada ejecutándose, arrancamos la cola
-
+            // 5. Finalización: Metemos la orden a la cola global
+            BatchQueue.Enqueue(newOrder);
+            BatchRecord.Enqueue(newOrder);
+            destinationVessel.MixerQueue.Enqueue(_mixer);
         }
 
+        public void SelectNextStep()
+        {
+            // 1. Buscamos el siguiente paso en la cola del lote actual
+            if (ActivePipeline.TryDequeue(out var nextActivity))
+            {
+                // El paso nace y se va directo al historial para el reporte
+                _CurrentStep = nextActivity;
+                BatchRecordHistory.Enqueue(_CurrentStep);
+
+                // LA VERDAD ABSOLUTA: El inicio es ahora
+                DateTime now = _mixer.CurrentDate;
+                _CurrentStep.SetFixedStart(now);
+
+                // Intentamos prepararlo
+                if (!_CurrentStep.PrepareStep())
+                {
+                    // Si no es necesario (ej: lavado), llamamos de nuevo 
+                    // para sacar el siguiente de la cola.
+                    SelectNextStep();
+                }
+            }
+            else
+            {
+                // 2. Si no hay más pasos, buscamos el siguiente LOTE
+                if (BatchQueue.TryDequeue(out var nextBatch))
+                {
+                    _CurrentBatch = BatchQueue.Dequeue();
+                    if (_CurrentBatch.Vessel is NewWipTank wipTank)
+                    {
+                        wipTank.ProcesedBatchQueue.Enqueue(_CurrentBatch);
+
+                    }
+                    if (_CurrentBatch.Vessel.MixerQueue.TryPeek(out var mixer))
+                    {
+                        if (mixer == _mixer)
+                        {
+                            _CurrentBatch.Vessel.MixerQueue.Dequeue();
+                        }
+                    }
+                    _CurrentBatch.Vessel.AssignedMixer = _mixer;
+                    _mixer.CurrentMaterial = _CurrentBatch.Product;
+                    _mixer.DestinationVessel = _CurrentBatch.Vessel;
+                    SelectNextStep();
+                }
+                else
+                {
+                    // 3. Fin de toda la programación
+                    _mixer.ReceiveStopCommand();
+                    _CurrentBatch = null;
+                    _CurrentStep = null!;
+                }
+            }
+        }
         public void StartPipeline()
         {
-            if (ActivePipeline.TryPeek(out var first))
+            if (BatchQueue.TryPeek(out var firstBatch))
             {
-                CurrentStep = first;
-                CurrentStep.SetFixedStart(_mixer.CurrentDate);
-                if (!CurrentStep.PrepareStep())
+                _CurrentBatch = BatchQueue.Dequeue();
+
+                if (_CurrentBatch.Vessel is NewWipTank wipTank)
                 {
-                    SelectNextStep(); // Saltar si el primero no es necesario
+                    wipTank.ProcesedBatchQueue.Enqueue(_CurrentBatch);
+
                 }
+                if (_CurrentBatch.Vessel.MixerQueue.TryPeek(out var mixer))
+                {
+                    if (mixer == _mixer)
+                    {
+                        _CurrentBatch.Vessel.MixerQueue.Dequeue();
+                    }
+                }
+
+
+                _CurrentBatch.Vessel.AssignedMixer = _mixer;
+                _mixer.CurrentMaterial = _CurrentBatch.Product;
+                _mixer.DestinationVessel = _CurrentBatch.Vessel;
+                SelectNextStep();
             }
         }
-        public DateTime MixerProjectedFreeTime
+
+        public bool ReviewIntegrityDataToCreateOrder(NewMixer mixer, NewRecipedInletTank Vessel, ProductDefinition backbone)
+        {
+            if (_mixer == null || Vessel == null || backbone == null)
+                return false;
+            if (_mixer.ProductCapabilities.TryGetValue(backbone, out var productCapabilities))
+            {
+                return true;
+            }
+            Console.WriteLine($"Data in Mixer {mixer.Name} not found");
+            return false;
+        }
+        public BatchOrder? CurrentBatch => _CurrentBatch;
+
+        public NewStepLink? CurrentStep => _CurrentStep;
+        /// <summary>
+        /// 1. ¿Cuándo terminará el mixer de usarse? (Fecha exacta)
+        /// Mira el último paso del último lote en la cola. Si no hay nada, usa el lote actual.
+        /// </summary>
+        public DateTime MixerProjectedFreeTime =>
+            BatchQueue.LastOrDefault()?.PlannedEndBatch
+            ?? _CurrentBatch?.PlannedEndBatch
+            ?? _mixer.CurrentDate;
+
+        public DateTime CurrentBatchProjectedEndDate =>
+            _CurrentBatch?.PlannedEndBatch
+           ?? _mixer.CurrentDate;
+        public DateTime CurrentBatchTheoricalEndDate =>
+           _CurrentBatch?.PlannedTheoricalEndBatch
+          ?? _mixer.CurrentDate;
+
+        /// <summary>
+        /// 2. Tiempo restante total para que el Mixer quede libre (TimeSpan)
+        /// </summary>
+        TimeSpan _TotalTimeUntilFree => MixerProjectedFreeTime - _mixer.CurrentDate;
+        public Amount TotalTimeUntilFree => new Amount(_TotalTimeUntilFree.TotalSeconds, TimeUnits.Second);
+        /// <summary>
+        /// 3. Tiempo de Trabajo Real del Lote Actual (BCT_Current)
+        /// Muestra cuánto tiempo de "motor" lleva consumido el batch en curso.
+        /// </summary>
+        public Amount CurrentBatchRealTime => _CurrentBatch?.BCT_Current ?? new Amount(0, TimeUnits.Second);
+
+        /// <summary>
+        /// 4. Tiempo Perdido (Starved) del Lote Actual
+        /// Muestra cuánto tiempo lleva el batch detenido por falta de recursos (bombas/operarios).
+        /// </summary>
+        public Amount CurrentBatchStarvedTime => _CurrentBatch?.TimeStarved ?? new Amount(0, TimeUnits.Second);
+
+        /// <summary>
+        /// 5. Tiempo Total Esperado para el Lote Actual (BCT_Expected)
+        /// Es la suma del Trabajo + Hambre + lo que falta por procesar.
+        /// </summary>
+        public Amount CurrentBatchExpectedTotal => _CurrentBatch?.BCT_Expected ?? new Amount(0, TimeUnits.Second);
+
+        public ProductDefinition? LastProduct => BatchQueue.LastOrDefault()?.Product ?? _mixer.CurrentMaterial;
+        public void AddStarvation()
+        {
+            _CurrentStep?.AddStarvation();
+        }
+        public string StatusMessage => _CurrentStep?.GetStatusMessage() ?? string.Empty;
+        public string SubStatusMessage => _CurrentStep?.GetSubStatusMessage() ?? string.Empty;
+        public double TotalRealDurationSeconds => BatchRecordHistory.Sum(x => x.RealDurationSeconds);
+        public double TotalStarvation => BatchRecordHistory.Sum(x => x.AccumulatedStarvation);
+        public double TotalTimeMixer => TotalRealDurationSeconds + TotalStarvation;
+        public double AU_Performance => _mixer.SecondsTotal == 0 ? 0 : TotalRealDurationSeconds / _mixer.SecondsTotal * 100;
+        public double CurrentBatchProgress
         {
             get
             {
-                // Buscamos el último paso del último batch encolado.
-                var lastStepInPipeline = ActivePipeline.LastOrDefault();
+                if (_CurrentBatch == null) return 0;
 
-                if (lastStepInPipeline != null)
-                {
-                    return lastStepInPipeline.PlannedEnd;
-                }
+                double total = _CurrentBatch.BCT_Expected.GetValue(TimeUnits.Second);
+                double worked = _CurrentBatch.BCT_Current.GetValue(TimeUnits.Second);
 
-                // Si no hay batches, el mixer está libre YA (o en su fecha actual).
-                return _mixer.CurrentDate;
+                return total <= 0 ? 0 : (worked / total) * 100;
             }
         }
 
-        /// <summary>
-        /// Indica cuánto tiempo falta para que el Mixer se libere de TODA su carga actual.
-        /// </summary>
-        public TimeSpan TotalTimeUntilFree => MixerProjectedFreeTime - _mixer.CurrentDate;
-        public void UpdateOrderMetrics(BatchOrder order)
-        {
-            // 1. Buscamos todos los pasos de esta orden en ambas colas
-            var allStepsForThisOrder = ExecutionHistory
-                .Where(s => s.ParentOrder.OrderId == order.OrderId)
-                .Concat(ActivePipeline.Where(s => s.ParentOrder.OrderId == order.OrderId));
-
-            // 2. Calculamos los "Amounts" solicitados
-            order.BatchTeorico = allStepsForThisOrder.Sum(s => s.DurationSeconds);
-            order.BatchReal = allStepsForThisOrder.Sum(s => s.RealDurationSeconds);
-        }
-        public DateTime CurrentBatchProjectedEnd
-        {
-            get
-            {
-                if (CurrentStep == null) return _mixer.CurrentDate;
-
-                // Buscamos en la cola el último paso que pertenece a la orden actual.
-                var lastStepOfCurrentOrder = ActivePipeline
-                    .Where(s => s.ParentOrder.OrderId == CurrentStep.ParentOrder.OrderId)
-                    .LastOrDefault();
-
-                return lastStepOfCurrentOrder?.PlannedEnd ?? _mixer.CurrentDate;
-            }
-        }
-
-        /// <summary>
-        /// 3. ÚLTIMO PRODUCTO PROGRAMADO:
-        /// Mira hasta el fondo de la cola para decirte qué es lo último que se va a fabricar.
-        /// </summary>
-        public BatchOrder? LastProgrammedBatch => ActivePipeline.LastOrDefault()?.ParentOrder;
-        public ProductDefinition? LastProduct => LastProgrammedBatch?.BackBone;
-        public BatchOrder? CurrentBatch => CurrentStep?.ParentOrder;
     }
+
     public class BatchOrder
     {
-        public ProductDefinition? BackBone { get; set; }
+        public NewMixer Mixer => _mixer;
+        NewMixer _mixer;
+        NewRecipedInletTank _Vessel;
+
+        public NewRecipedInletTank Vessel => _Vessel;
+        public ProductDefinition Product { get; private set; }
+        public BatchOrder(NewMixer mixer, NewRecipedInletTank Vessel)
+        {
+            _mixer = mixer;
+            _Vessel = Vessel;
+            Product = Vessel.CurrentMaterial!;
+            StartBatchDate = _mixer.CurrentDate;
+            TargetBatchSize = _mixer.ProductCapabilities[Product].GetValue(MassUnits.KiloGram);
+        }
+        // --- 1. IDENTIDAD Y CONTEXTO ---
         public Guid OrderId { get; set; } = Guid.NewGuid();
-        public string ProductName => BackBone?.Name ?? string.Empty;
-        public double TargetBatchSize { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public string MixerName => _mixer.Name;
+        public string WipName => _Vessel.Name;
 
-        // Podemos guardar aquí métricas específicas del lote
-        public double TotalStarvation { get; set; }
-        public double BatchTeorico { get; set; } // Suma de segundos teóricos
-        public double BatchReal { get; set; }    // Suma de segundos reales (Teórico + Starved)
 
-        // El porcentaje de eficiencia de tiempo del lote
-        public double OEE_Performance => BatchTeorico > 0 ? (BatchTeorico / BatchReal) * 100 : 100;
+        public string ProductName => Product?.Name ?? "N/A";
+        public double TargetBatchSize { get; private set; }
+        public DateTime StartBatchDate { get; private set; } = DateTime.Now;
+
+        // --- 2. LA PROPIEDAD DE LOS PASOS ---
+        // Esta lista contiene la secuencia física de la receta.
+        public List<NewStepLink> Steps { get; set; } = new();
+
+        // --- 3. MÉTRICAS CALCULADAS (En tiempo real) ---
+        // Estas propiedades no guardan datos, los calculan "al vuelo" consultando sus pasos.
+
+        // Suma de lo que la receta dice que debe durar.
+        double BatchTeorico => Steps.Sum(s =>
+           Math.Max(s.TheoricalDurationSeconds, s.RealDurationSeconds));
+        public Amount BCT_Theorical => new Amount(BatchTeorico, TimeUnits.Second);
+
+        // Suma de todos los segundos de "hambre" de todos los pasos.
+        double TotalStarvation => Steps.Sum(s => s.AccumulatedStarvation);
+        public Amount TimeStarved => new Amount(TotalStarvation, TimeUnits.Second);
+
+        // Suma de los segundos que el equipo ha estado TRABAJANDO físicamente.
+        double TotalWorkedSeconds => Steps.Sum(s => s.RealDurationSeconds);
+        public Amount BCT_Current => new Amount(TotalWorkedSeconds, TimeUnits.Second);
+
+        double TotalSeconds => Steps.Sum(s => s.RealDurationSeconds + s.AccumulatedStarvation);
+        double CalculatedBatchReal => BatchTeorico + TotalStarvation;
+
+        public Amount BCT_Expected => new Amount(CalculatedBatchReal, TimeUnits.Second);
+
+        // --- 4. INDICADORES DE EFICIENCIA ---
+
+        // $$OEE = \frac{BatchTeorico}{CalculatedBatchReal} \times 100$$
+        public double AU_Performance
+        {
+            get
+            {
+                if (TotalSeconds <= 0) return 100;
+                double oee = (TotalWorkedSeconds / TotalSeconds) * 100;
+                return oee > 100 ? 100 : oee; // Capado al 100% si vamos más rápido
+            }
+        }
+        public DateTime PlannedEndBatch => Steps.MaxBy(s => s.PlannedEnd)?.PlannedEnd ?? _mixer.CurrentDate;
+        public DateTime PlannedTheoricalEndBatch => StartBatchDate.AddSeconds(BatchTeorico);
+        // Indica cuánto tiempo falta para terminar esta orden específica.
+        TimeSpan _TimeToComplete
+        {
+            get
+            {
+                var lastStep = Steps.LastOrDefault();
+                if (lastStep == null) return TimeSpan.Zero;
+
+                // Usamos la fecha esperada del último paso menos el ahora del simulador.
+                var diff = lastStep.PlannedEnd - lastStep.CurrentDate;
+                return diff.TotalSeconds > 0 ? diff : TimeSpan.Zero;
+            }
+        }
+
+        public Queue<NewStepLink> ActivePipeline { get; set; } = new Queue<NewStepLink>();
+        public Queue<NewStepLink> BatchRecordHistory { get; set; } = new Queue<NewStepLink>();
+
     }
+
 }

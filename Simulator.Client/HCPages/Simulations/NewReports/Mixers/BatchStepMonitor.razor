@@ -1,0 +1,134 @@
+﻿@using MudBlazor
+@using GeminiSimulator.NewFilesSimulations.ManufactureEquipments
+@using BlazorDownloadFile
+@inject IPlantExportService ExportService
+@inject IBlazorDownloadFileService DownloadService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="pa-4 d-flex flex-column" Style="height: 100%; border: 2px solid var(--mud-palette-lines-default); border-radius: 8px; position: relative;">
+    
+    @* INDICADOR DE CARGA INTERNO *@
+    <MudOverlay @bind-Visible="_isExporting" DarkBackground="true" Absolute="true" ZIndex="10">
+        <div class="d-flex flex-column align-center">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+            <MudText Typo="Typo.caption" Color="Color.Inherit" Class="mt-2" Style="font-weight: 900;">GENERANDO ARCHIVO...</MudText>
+        </div>
+    </MudOverlay>
+
+    @if (DisplayBatch != null)
+    {
+        @* 1. ENCABEZADO *@
+        <div class="mb-4" style="border-bottom: 4px solid var(--mud-palette-primary);">
+            <MudText Typo="Typo.h5" Style="font-weight: 900;">@DisplayBatch.ProductName.ToUpper()</MudText>
+            <MudText Typo="Typo.caption" Style="font-weight: 900; color: gray;">@DisplayBatch.MixerName >> @DisplayBatch.WipName</MudText>
+        </div>
+
+        @* 2. TABLA DE PASOS *@
+        <div class="flex-grow-1" style="overflow-y: auto;">
+            <MudSimpleTable Dense="true" Elevation="0" Hover="true">
+                <thead>
+                    <tr>
+                        <th style="width: 50px; font-weight: 900; font-size: 0.75rem;">STATUS</th>
+                        <th style="font-weight: 900; font-size: 0.75rem;">PROCESS STEP</th>
+                        <th style="font-weight: 900; font-size: 0.75rem;">PLAN</th>
+                        <th style="font-weight: 900; font-size: 0.75rem;">REAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var step in DisplayBatch.Steps)
+                    {
+                        var isCompleted = step.RealDurationSeconds > 0 && step != CurrentStep;
+                        var isActive = step == CurrentStep;
+                        var isDelayed = step.RealDurationSeconds > step.TheoricalDurationSeconds;
+                        var timeColor = isDelayed ? "var(--mud-palette-error)" : "var(--mud-palette-success)";
+
+                        <tr>
+                            <td class="text-center pa-1">
+                                @if (isActive)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Info" Size="Size.Small" />
+                                }
+                                else if (isCompleted)
+                                {
+
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                }
+                            </td>
+                            <td style="font-weight: 700; font-size: 0.85rem; color: @(isActive ? "var(--mud-palette-info)" : "black")">
+                                @step.GetStatusMessage().ToUpper()
+                            </td>
+                            <td style="font-size: 0.85rem;">@step.TheoricalDurationSeconds.ToString("F0")s</td>
+                            <td style="font-weight: 900; font-size: 0.85rem; color: @(isCompleted || isActive ? timeColor : "black")">
+                                @step.RealDurationSeconds.ToString("F0")s
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </div>
+
+        @* 3. RESUMEN Y EXPORTACIÓN *@
+        @if (DisplayBatch.Steps.Any(s => s.RealDurationSeconds > 0))
+        {
+            <div class="mt-4 pa-4" style="background-color: var(--mud-palette-background-grey); border-radius: 8px; border: 1px solid var(--mud-palette-lines-default);">
+                <MudGrid  Class="align-center">
+                    <MudItem xs="8">
+                        <MudGrid >
+                            <MudItem xs="4" class="text-center">
+                                <MudText Typo="Typo.caption" Style="font-weight: 900; color: gray;">OEE FINAL</MudText>
+                                <MudText Typo="Typo.h6" Style="@GetOeeStyle(DisplayBatch.AU_Performance)">
+                                    @DisplayBatch.AU_Performance.ToString("F1")%
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="4" class="text-center" style="border-left: 1px solid lightgray; border-right: 1px solid lightgray;">
+                                <MudText Typo="Typo.caption" Style="font-weight: 900; color: gray;">STARVED</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight: 900; color: var(--mud-palette-error);">
+                                    @DisplayBatch.TimeStarved.Value.ToString("F0")s
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="4" class="text-center">
+                                <MudText Typo="Typo.caption" Style="font-weight: 900; color: gray;">TOTAL TIME</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight: 900; color: var(--mud-palette-primary);">
+                                    @((DisplayBatch.BCT_Current.Value + DisplayBatch.TimeStarved.Value).ToString("F0"))s
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudItem>
+
+                   
+                </MudGrid>
+            </div>
+        }
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public BatchOrder? DisplayBatch { get; set; }
+    [Parameter] public NewStepLink? CurrentStep { get; set; }
+    
+    private bool _isExporting = false;
+
+    private string GetOeeStyle(double au)
+    {
+        string color = au < 75 ? "var(--mud-palette-error)" : "var(--mud-palette-success)";
+        return $"font-weight: 900; color: {color};";
+    }
+
+
+    // private async Task DownloadSingleExcel()
+    // {
+    //     if (DisplayBatch == null) return;
+    //     try
+    //     {
+    //         _isExporting = true;
+    //         StateHasChanged();
+    //         await Task.Delay(100);
+
+    //         var bytes = ExportService.GenerateExcelReport(DisplayBatch);
+    //         await DownloadService.DownloadFile($"{DisplayBatch.ProductName}_Data.xlsx", bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    //         Snackbar.Add("Excel generado correctamente", Severity.Success);
+    //     }
+    //     catch (Exception) { Snackbar.Add("Error al generar Excel", Severity.Error); }
+    //     finally { _isExporting = false; }
+    // }
+}

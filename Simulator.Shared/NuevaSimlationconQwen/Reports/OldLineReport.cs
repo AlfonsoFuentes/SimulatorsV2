@@ -2,12 +2,12 @@
 
 namespace Simulator.Shared.NuevaSimlationconQwen.Reports
 {
-    public class LineReport
+    public class OldLineReport
     {
         private readonly Dictionary<LineTimeType, Amount> _timeAccumulators = new();
         private readonly ProcessLine _line;
         public string LineName { get; set; } = string.Empty;
-        public LineReport(ProcessLine line)
+        public OldLineReport(ProcessLine line)
         {
 
             _line = line;

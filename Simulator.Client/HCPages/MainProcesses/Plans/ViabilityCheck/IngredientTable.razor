@@ -1,0 +1,60 @@
+﻿
+@* Componente: IngredientTable.razor *@
+<MudSimpleTable Dense="true" Hover="true" Elevation="0" Class="border mt-2">
+    <thead>
+        <tr>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">STEP NAME</MudText></th>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">TARGET</MudText></th>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">TIME</MudText></th>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">SOURCE</MudText></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var ing in Ingredients)
+        {
+            <tr>
+                <td>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        <MudIcon Icon="@(ing.IsManual? Icons.Material.Filled.Person : Icons.Material.Filled.PrecisionManufacturing)"
+                                 Size="Size.Small" Style="font-size: 1rem;" />
+                        <MudText Typo="Typo.caption">@ing.Name</MudText>
+                    </MudStack>
+                </td>
+                <td><MudText Typo="Typo.caption">@(ing.Mass?.ToString() ?? "---")</MudText></td>
+                <td><MudText Typo="Typo.caption">@ing.Time.Value.ToString("F1") min</MudText></td>
+                <td>
+                    @if (ing.IsConnected)
+                    {
+                        @if (ing.IsManual)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Info" Style="font-weight: bold;">@ing.SourcePath.ToUpper()</MudText>
+                        }
+                        else
+                        {
+                            <MudMenu Label="VIEW SOURCES" Size="Size.Small" Variant="Variant.Text" EndIcon="@Icons.Material.Filled.ArrowDropDown" Dense="true" Color="Color.Primary">
+                                @foreach (var path in ing.AvailablePaths)
+                                {
+                                    <MudMenuItem Disabled="true">
+                                        <MudText Typo="Typo.caption" Style="font-weight: bold;">@path.PumpName (@path.NominalFlow kg/min)</MudText>
+                                        @foreach (var tank in path.ConnectedTanks)
+                                        {
+                                            <MudText Typo="Typo.caption" Class="d-block ml-3">• @tank</MudText>
+                                        }
+                                    </MudMenuItem>
+                                }
+                            </MudMenu>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">@ing.Status</MudText>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+@code {
+    [Parameter] public List<IngredientCheck> Ingredients { get; set; } = new();
+}

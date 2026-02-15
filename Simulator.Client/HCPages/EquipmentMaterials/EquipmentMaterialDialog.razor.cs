@@ -1,4 +1,5 @@
-﻿using QWENShared.DTOS.MaterialEquipments;
+﻿using MudBlazor;
+using QWENShared.DTOS.MaterialEquipments;
 using QWENShared.DTOS.Materials;
 using QWENShared.Enums;
 using Simulator.Client.HCPages.Materials;

@@ -1,5 +1,9 @@
 ﻿@using GeminiSimulator.Main
 @using GeminiSimulator.NewFilesSimulations.Context
+@using Simulator.Client.HCPages.MainProcesses.Plans.ViabilityCheck
+@using Simulator.Client.HCPages.Simulations.NewReports.Lines
+@using Simulator.Client.HCPages.Simulations.NewReports.Mixers
+
 @implements IDisposable
 @if (Engine != null)
 {
@@ -22,7 +26,7 @@
                 <MudItem xs="12" md="4" Class="d-flex justify-center gap-4">
                     @if (Engine.Status == EngineStatus.Stopped)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.PlayCircle" Color="Color.Success" Size="Size.Large" OnClick="StartSimulation" />
+                        <MudIconButton Icon="@Icons.Material.Filled.PlayCircle" Color="Color.Success" Size="Size.Large" OnClick="StartSimulation" Disabled="!ViabilityChechReport.GlobalPermit" />
                     }
                     else
                     {
@@ -47,18 +51,38 @@
                 </MudItem>
             </MudGrid>
         </MudPaper>
+        <MudPaper>
+            <MudField Label="Batch Transfer calculation Mode" Variant="Variant.Filled" InnerPadding="false">
+                <MudRadioGroup T=TransferBatchToMixerCalculation Value="@Context.BatchTransferCalculationModel" ValueChanged="@((arg) => Context.SetBatchTrasnferCalculationModel(arg))">
+                    <MudRadio Color="Color.Success" Value="@(TransferBatchToMixerCalculation.Automatic)">Automatic</MudRadio>
+                    <MudRadio Color="Color.Primary" Value="@(TransferBatchToMixerCalculation.Manual)">Manual</MudRadio>
+                </MudRadioGroup>
+            </MudField>
+        </MudPaper>
        
-        <MudTabs KeepPanelsAlive="true">
-            <MudTabPanel Text="Layout">
-                <SimulationLayout Engine="@Engine" />
-            </MudTabPanel>
-            <MudTabPanel Text="Scheduler">
-                <SimulationDashboard2 Engine="@Engine" />
-            </MudTabPanel>
-            <MudTabPanel Text="Starved Report">
-                <MixerPumpReport Engine="@Engine"></MixerPumpReport>
-            </MudTabPanel>
-        </MudTabs>
+        @if (ViabilityChechReport.GlobalPermit)
+        {
+
+            <MudTabs KeepPanelsAlive="true">
+                <MudTabPanel Text="Layout">
+                    <SimulationLayout Engine="@Engine" />
+                </MudTabPanel>
+                <MudTabPanel Text="Scheduler">
+                    <SimulationDashboard2 Engine="@Engine" />
+                </MudTabPanel>
+                <MudTabPanel Text="Mixer Report">
+                    <LiveDashboardMixer Engine="@Engine"></LiveDashboardMixer>
+                </MudTabPanel>
+                <MudTabPanel Text="Line Report">
+                    <PackageDashboard Engine="@Engine"></PackageDashboard>
+                </MudTabPanel>
+            </MudTabs>
+        }
+        else
+        {
+            <DashboardViabilityReport Report="ViabilityChechReport"></DashboardViabilityReport>
+        }
+
 
 
     </MudContainer>
@@ -69,12 +93,20 @@ else
 }
 
 @code {
+    [Parameter] public NewSimulationContext Context { get; set; } = null!;
     [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
+    [Parameter]
+    public PlanValidationReport ViabilityChechReport { get; set; } = null!;
+
 
     private DateTime _displayTime;
     private CancellationTokenSource? _cts;
 
     protected override void OnInitialized()
+    {
+       
+    }
+    protected override void OnParametersSet()
     {
         if (Engine != null)
         {

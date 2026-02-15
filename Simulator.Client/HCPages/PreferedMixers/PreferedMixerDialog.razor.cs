@@ -1,4 +1,5 @@
-﻿using QWENShared.DTOS.Mixers;
+﻿using MudBlazor;
+using QWENShared.DTOS.Mixers;
 using QWENShared.DTOS.PreferedMixers;
 
 namespace Simulator.Client.HCPages.PreferedMixers

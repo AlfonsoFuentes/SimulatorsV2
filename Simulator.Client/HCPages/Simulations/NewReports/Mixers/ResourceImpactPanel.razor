@@ -1,0 +1,29 @@
+﻿@using MudBlazor
+@using GeminiSimulator.NewFilesSimulations.ManufactureEquipments
+
+<MudPaper Elevation="0" Class="pa-4 flex-grow-1" Style="border: 2px solid var(--mud-palette-lines-default); border-radius: 8px; overflow-y: auto;">
+    <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight: 900; text-transform: uppercase;">Starved Resources</MudText>
+    <MudSimpleTable Dense="true" Elevation="0">
+        <tbody>
+            @{
+                var delays = FilteredHistory.Where(x => x.AccumulatedStarvation > 0).GroupBy(x => new { x.MixerName, x.ResourceName })
+                             .Select(g => new { Mixer = g.Key.MixerName, Res = g.Key.ResourceName, Total = g.Sum(x => x.AccumulatedStarvation) })
+                             .OrderByDescending(x => x.Total).ToList();
+            }
+            @foreach (var item in delays)
+            {
+                <tr>
+                    <td style="font-size: 0.8rem;"><span style="font-weight: 900; color: var(--mud-palette-primary);">@item.Mixer.ToUpper()</span> | @item.Res.ToUpper()</td>
+                    <td class="text-right" style="color: var(--mud-palette-error); font-weight: 900; font-size: 0.85rem;">@item.Total.ToString("F0")s</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+    <MudDivider Class="my-4" />
+    <MudText Typo="Typo.h5" Style="@($"font-weight: 900; color: {(ChaosSeconds > 0 ? "var(--mud-palette-error)" : "var(--mud-palette-success)")};")">@((ChaosSeconds / 60).ToString("F1")) MIN DELAY</MudText>
+</MudPaper>
+
+@code {
+    [Parameter] public List<NewStepLink> FilteredHistory { get; set; } = new();
+    [Parameter] public double ChaosSeconds { get; set; }
+}

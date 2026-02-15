@@ -1,3 +1,4 @@
+using MudBlazor;
 using QWENShared.DTOS.MainProcesss;
 
 namespace Simulator.Client.HCPages.MainProcesses;

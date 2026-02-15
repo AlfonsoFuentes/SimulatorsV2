@@ -1,5 +1,6 @@
 ﻿using GeminiSimulator.NewFilesSimulations.BaseClasss;
 using GeminiSimulator.NewFilesSimulations.Tanks;
+using GeminiSimulator.PlantUnits.Lines;
 
 namespace GeminiSimulator.NewFilesSimulations.PackageLines
 {
@@ -21,7 +22,7 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
 
         public void Calculate()
         {
-
+            
         }
 
         public void CheckTransitions()
@@ -43,7 +44,7 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
         public string HexColor => "Gemini me ayuda con el color";
         public void Calculate()
         {
-
+            _line.AddStandbySecond();
         }
 
         public void CheckTransitions()
@@ -60,10 +61,7 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
                 // El siguiente paso lógico es evaluar si hay una parada programada 
                 // (ej. reunión de inicio de turno) o si vamos directo a preparar la máquina.
 
-                //if (_line.IsOnPlannedBreak(_line.CurrentDate))
-                //{
-                //    _line.TransitionInletState(new NewPlannedDowntimeState(_line));
-                //}
+                _line.TransitionInletState(new NewLineInletAvailable(_line));
 
             }
 
@@ -88,7 +86,7 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
 
         public void Calculate()
         {
-
+   
         }
 
         public void CheckTransitions()
@@ -116,7 +114,7 @@ namespace GeminiSimulator.NewFilesSimulations.PackageLines
 
         public void Calculate()
         {
-
+           
         }
 
         public void CheckTransitions()

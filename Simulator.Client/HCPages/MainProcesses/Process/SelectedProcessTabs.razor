@@ -12,16 +12,14 @@
     <MudTabPanel Text="Simulation">
         @if(Engine!=null)
         {
-            <NewSimulationDashBoard Engine="@Engine"></NewSimulationDashBoard>
+            <NewSimulationDashBoard Engine="@Engine" ViabilityChechReport="ViabilityChechReport" Context="Context"></NewSimulationDashBoard>
         }
        
 
     </MudTabPanel>
 
-    <MudTabPanel Text="Mixer Capacity">
-        <NewProductionCapacityReport Simulation=@Simulation />
-    </MudTabPanel>
-    <MudTabPanel Text="Tanks">
+   
+  <MudTabPanel Text="Tanks">
         <TankTable FocusFactory=@FocusFactory MainProcessId="@MainProcessId" Items="SimulationDTO.Tanks" GetAllExternal="GetAll"></TankTable>
     </MudTabPanel>
     <MudTabPanel Text="Pumps">
@@ -46,7 +44,9 @@
 </MudTabs>
 
 @code {
-
+    [Parameter,EditorRequired] public NewSimulationContext Context { get; set; } = null!;
+    [Parameter,EditorRequired]
+    public PlanValidationReport ViabilityChechReport { get; set; } = null!;
     [Parameter, EditorRequired] public NewSimulationEngine Engine { get; set; } = null!;
     [Parameter]
     public GeneralSimulation Simulation { get; set; } = null!;

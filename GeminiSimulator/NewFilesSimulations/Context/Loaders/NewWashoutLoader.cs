@@ -1,12 +1,4 @@
-﻿using GeminiSimulator.Helpers;
-using GeminiSimulator.Main;
-using GeminiSimulator.NewFilesSimulations.Context;
-using GeminiSimulator.PlantUnits.Lines;
-using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers;
-using GeminiSimulator.PlantUnits.ManufacturingEquipments.Skids;
-using GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators;
-using GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps;
-using GeminiSimulator.PlantUnits.Tanks;
+﻿using GeminiSimulator.NewFilesSimulations.Context;
 using Simulator.Shared.Simulations;
 
 namespace GeminiSimulator.WashoutMatrixs

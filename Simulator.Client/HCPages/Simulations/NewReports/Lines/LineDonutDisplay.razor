@@ -1,0 +1,15 @@
+﻿<MudPaper Elevation="4" Class="pa-6 d-flex flex-column align-center justify-center"
+          Style="border-radius: 15px; height: 320px; border-bottom: 6px solid #594ae2;">
+    <MudText Typo="Typo.h6" Style="font-weight: 900;">@Title.ToUpper()</MudText>
+    <div style="position: relative; display: inline-flex;" class="mt-4">
+        <MudProgressCircular Value="@AuValue" Size="Size.Large" StrokeWidth="10" Style="height:180px; width:180px; color: #594ae2;" />
+        <div style="position: absolute; top: 0; left: 0; bottom: 0; right: 0; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <MudText Typo="Typo.h4" Style="font-weight: 900;">@AuValue.ToString("F1")%</MudText>
+            <MudText Typo="Typo.caption" Style="font-weight: 700;">REAL AU</MudText>
+        </div>
+    </div>
+</MudPaper>
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public double AuValue { get; set; }
+}

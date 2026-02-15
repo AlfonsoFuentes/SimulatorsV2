@@ -1,3 +1,5 @@
+using MudBlazor;
+
 namespace Simulator.Client.Templates;
 public partial class TableTemplate<TValue>
 {

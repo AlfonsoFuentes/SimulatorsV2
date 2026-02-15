@@ -1,0 +1,270 @@
+﻿@page "/dashboard"
+@using GeminiSimulator.NewFilesSimulations.ManufactureEquipments
+@using MudBlazor
+@using BlazorDownloadFile
+@using Simulator.Client.Services.ExportServices
+
+@inject IPlantExportService ExportService
+@inject IBlazorDownloadFileService DownloadService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    
+    @* --- OVERLAY DE CARGA PARA EXCEL --- *@
+    <MudOverlay @bind-Visible="_isExporting" DarkBackground="true" ZIndex="9999">
+        <div class="d-flex flex-column align-center">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.h6" Color="Color.Inherit" Class="mt-4" Style="font-weight: 900;">GENERANDO EXCEL...</MudText>
+        </div>
+    </MudOverlay>
+
+    <MudGrid Spacing="2">
+        
+        @* --- HEADER / BARRA SUPERIOR DE FILTROS --- *@
+        <MudItem xs="12" Class="d-flex align-center gap-4 pa-4" Style="background-color: var(--mud-palette-primary); color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <MudIcon Icon="@Icons.Material.Filled.PrecisionManufacturing" Size="Size.Large" />
+            <div class="d-flex flex-column">
+                <MudText Typo="Typo.h5" Style="font-weight: 900; line-height: 1;">PRODUCTION MONITOR</MudText>
+                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.7);">Real-Time Performance Tracking</MudText>
+            </div>
+            
+            <MudSpacer />
+
+            @* BOTÓN EXCEL GLOBAL *@
+            @if (Engine.Mixers.Any(m => m.BatchManager.BatchRecord.Any()))
+            {
+                <MudIconButton Icon="@Icons.Custom.FileFormats.FileExcel"
+                               Color="Color.Success"
+                               Variant="Variant.Filled"
+                               Disabled="_isExporting"
+                               OnClick="DownloadGlobalExcel"
+                               Size="Size.Small" />
+             
+            }
+
+            <MudDivider Vertical="true" FlexItem="true" Style="background-color: rgba(255,255,255,0.3); width: 2px; height: 35px;" />
+
+            @* SELECTORES DE FILTRO *@
+            <MudSelect T="string" Label="WIP / TANK" Value="@SelectedVessel" ValueChanged="OnVesselSelected" Variant="Variant.Filled" Style="background: white; width: 140px; color: black;" Dense="true">
+                <MudSelectItem Value="@("ALL")">ALL WIPs</MudSelectItem>
+                @foreach (var v in GetAllVessels())
+                {
+                    <MudSelectItem Value="@v">@v.ToUpper()</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="NewBatchManager" Label="MIXER" Value="@SelectedManager" ValueChanged="OnManagerSelected" Variant="Variant.Filled" Style="background: white; width: 140px; color: black;" Dense="true">
+                <MudSelectItem T="NewBatchManager" Value="@(null)">ALL MIXERS</MudSelectItem>
+                @foreach (var m in Engine.Mixers)
+                {
+                    <MudSelectItem T="NewBatchManager" Value="@m.BatchManager">@m.Name.ToUpper()</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="BatchOrder" Label="BATCH RECORD" Value="@SelectedBatch" ValueChanged="OnBatchSelected" Disabled="@(SelectedManager == null && SelectedVessel == "ALL")" Variant="Variant.Filled" Style="background: white; width: 220px; color: black;" Dense="true">
+                <MudSelectItem T="BatchOrder" Value="@(null)">ACTIVE BATCH</MudSelectItem>
+                @foreach (var b in GetBatchOptions())
+                {
+                    <MudSelectItem T="BatchOrder" Value="@b">@b.ProductName.ToUpper()</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        @* --- COLUMNA IZQUIERDA: MÉTRICAS (DONA E INSIGHTS) --- *@
+        <MudItem xs="12" md="4" Class="d-flex flex-column gap-2" Style="height: 700px;">
+            <AuDonutDisplay Title="@GetDonutTitle()" AuValue="@CalculateAu()" />
+            <InsightPanel FilteredHistory="@GetFilteredHistory()" ChaosSeconds="@CalculateChaos()" IdleTime="0" />
+        </MudItem>
+
+        @* --- COLUMNA DERECHA: PANEL DINÁMICO --- *@
+        <MudItem xs="12" md="8" Style="height: 700px; overflow-y: auto;">
+            
+            @if (SelectedManager == null && SelectedVessel == "ALL" && SelectedBatch == null)
+            {
+                @* 1. VISTA GLOBAL: TARJETAS DE MIXERS (Con el nuevo relojito) *@
+                <div class="d-flex align-center mb-4 mt-2">
+                    <MudIcon Icon="@Icons.Material.Filled.GridView" Color="Color.Primary" Class="mr-2" />
+                    <MudText Typo="Typo.h6" Style="font-weight: 900;">PLANT OVERVIEW - MIXER CARDS</MudText>
+                </div>
+
+                <MudGrid Spacing="3">
+                    @foreach (var mixer in Engine.Mixers)
+                    {
+                        <MudItem xs="12" sm="6" lg="4">
+                            @* Tarjeta del Mixer Ajustada *@
+                            <MudPaper Elevation="4" Class="pa-4 d-flex flex-column justify-space-between"
+                                      Style="@(GetMixerCardStyle(mixer.BatchManager.AU_Performance) + " height: 100%;")"
+                                      @onclick="@(() => OnManagerSelected(mixer.BatchManager))">
+                                
+                                @* Cabecera: Nombre y Chip de Estado *@
+                                <div>
+                                    <div class="d-flex justify-space-between align-center mb-1">
+                                        <MudText Typo="Typo.h6" Style="font-weight: 900; line-height: 1.2;">@mixer.Name.ToUpper()</MudText>
+                                        <MudChip T="string"
+                                                 Color="@(mixer.BatchManager.CurrentBatch != null ? Color.Success : Color.Default)"
+                                                 Size="Size.Small"
+                                                 Variant="Variant.Filled"
+                                                 Class="ma-0"
+                                                 Style="font-weight: 700;">
+                                            @(mixer.BatchManager.CurrentBatch != null ? "RUNNING" : "IDLE")
+                                        </MudChip>
+                                    </div>
+
+                                    <MudText Typo="Typo.body2" Class="mb-3" Style="color: var(--mud-palette-grey-darken2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        Prod: <b>@(mixer.BatchManager.CurrentBatch?.ProductName ?? "-")</b>
+                                    </MudText>
+                                </div>
+
+                                @* Sección Inferior: Valor Numérico y Relojito (Gauge) *@
+                                <div class="d-flex align-center justify-space-between mt-2 pt-2" style="border-top: 1px solid rgba(0,0,0,0.05);">
+                                    <div>
+                                        @* Tipografía ajustada para no desbordar *@
+                                        <MudText Typo="Typo.h5" Style="font-weight: 900; line-height: 1;">
+                                            @mixer.BatchManager.AU_Performance.ToString("F1")%
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Style="font-weight: 700; color: gray; letter-spacing: 0.5px;">
+                                            AU PERF.
+                                        </MudText>
+                                    </div>
+                                    
+                                    @* El nuevo Relojito Dinámico *@
+                                    @{
+                                        var auValue = mixer.BatchManager.AU_Performance;
+                                        var gaugeColor = auValue < 75 ? Color.Error : Color.Success;
+                                    }
+                                    <MudProgressCircular Value="@auValue"
+                                                         Color="@gaugeColor"
+                                                         Size="Size.Medium"
+                                                         StrokeWidth="6"
+                                                         Style="opacity: 0.9;" />
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+            else
+            {
+                @* 2. VISTA FILTRADA: MONITOR DE PASOS *@
+                <BatchStepMonitor DisplayBatch="@GetActiveBatch()" CurrentStep="@SelectedManager?._CurrentStep" />
+            }
+        </MudItem>
+
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter] public NewSimulationEngine Engine { get; set; } = null!;
+    
+    private NewBatchManager? SelectedManager;
+    private string SelectedVessel = "ALL";
+    private BatchOrder? SelectedBatch;
+    private bool _isExporting = false;
+
+    // --- MANEJO DE EVENTOS DE FILTRO ---
+    private void OnManagerSelected(NewBatchManager? m)
+    {
+        SelectedManager = m;
+        SelectedBatch = null;
+        SelectedVessel = "ALL";
+        StateHasChanged();
+    }
+    
+    private void OnVesselSelected(string v)
+    {
+        SelectedVessel = v;
+        SelectedManager = null;
+        SelectedBatch = null;
+        StateHasChanged();
+    }
+    
+    private void OnBatchSelected(BatchOrder? b)
+    {
+        SelectedBatch = b;
+        StateHasChanged();
+    }
+
+    // --- LÓGICA DE DATOS ---
+    private List<NewStepLink> GetFilteredHistory()
+    {
+        if (SelectedBatch != null) return SelectedBatch.Steps;
+        
+        var query = Engine.Mixers.SelectMany(m => m.BatchManager.BatchRecord.SelectMany(b => b.Steps));
+        
+        if (SelectedVessel != "ALL") return query.Where(s => s.ResourceName == SelectedVessel).ToList();
+        if (SelectedManager != null) return SelectedManager.BatchRecord.SelectMany(b => b.Steps).ToList();
+        
+        return query.ToList();
+    }
+
+    private double CalculateAu()
+    {
+        var steps = GetFilteredHistory();
+        if (!steps.Any()) return 0;
+        
+        double worked = steps.Sum(x => x.RealDurationSeconds);
+        double total = worked + steps.Sum(x => x.AccumulatedStarvation) + 0.001;
+        return (worked / total) * 100;
+    }
+
+    private BatchOrder? GetActiveBatch()
+    {
+        if (SelectedBatch != null) return SelectedBatch;
+        if (SelectedVessel != "ALL") return Engine.Mixers.SelectMany(m => m.BatchManager.BatchRecord).FirstOrDefault(b => b.WipName == SelectedVessel);
+        return SelectedManager?.CurrentBatch;
+    }
+
+    private IEnumerable<BatchOrder> GetBatchOptions()
+    {
+        if (SelectedManager != null) return SelectedManager.BatchRecord.AsEnumerable().Reverse();
+        if (SelectedVessel != "ALL") return Engine.Mixers.SelectMany(m => m.BatchManager.BatchRecord).Where(b => b.WipName == SelectedVessel).Reverse();
+        return Enumerable.Empty<BatchOrder>();
+    }
+
+    private List<string> GetAllVessels() => Engine.Mixers.SelectMany(m => m.BatchManager.BatchRecord.Select(b => b.WipName)).Distinct().ToList();
+    
+    private string GetDonutTitle()
+    {
+        if (SelectedBatch != null) return SelectedBatch.ProductName;
+        if (SelectedVessel != "ALL") return $"WIP {SelectedVessel}";
+        return SelectedManager?.MixerName ?? "PLANT AVERAGE";
+    }
+
+    private double CalculateChaos() => SelectedManager != null ? (SelectedManager.MixerProjectedFreeTime - SelectedManager.CurrentBatchTheoricalEndDate).TotalSeconds : 0;
+
+    // --- ESTILOS VISUALES ---
+    private string GetMixerCardStyle(double au)
+    {
+        // Colores de fondo y borde tipo semáforo (Rojo si < 75, Verde si >= 75)
+        string color = au < 75 ? "#FFF5F5" : "#F0FFF4";
+        string border = au < 75 ? "#F87171" : "#4ADE80";
+        return $"cursor: pointer; background-color: {color}; border-top: 6px solid {border}; transition: all 0.2s ease; border-radius: 12px;";
+    }
+
+    // --- EXPORTACIÓN A EXCEL ---
+    private async Task DownloadGlobalExcel()
+    {
+        try
+        {
+            _isExporting = true;
+            StateHasChanged();
+            await Task.Delay(50); // Pequeña pausa para que el UI muestre el overlay
+            
+            var bytes = ExportService.GenerateMasterPlantReport(Engine.Lines,Engine.Mixers);
+            string fileName = $"Plant_Efficiency_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            
+            await DownloadService.DownloadFile(fileName, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            Snackbar.Add("Excel Report Generated Successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error generating Excel: {ex.Message}", Severity.Error);
+            Console.WriteLine($"EXCEL ERROR: {ex}"); // Log para depurar
+        }
+        finally
+        {
+            _isExporting = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,6 +1,8 @@
 ﻿using GeminiSimulator.Materials;
 using GeminiSimulator.NewFilesSimulations.BaseClasss;
+using GeminiSimulator.NewFilesSimulations.Context;
 using GeminiSimulator.NewFilesSimulations.Operators;
+using GeminiSimulator.NewFilesSimulations.PackageLines;
 using GeminiSimulator.NewFilesSimulations.Tanks;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers;
 using GeminiSimulator.WashoutMatrixs;
@@ -11,31 +13,40 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
 {
     public class NewMixer : NewManufacture
     {
+        public List<NewLine> PreferedLines { get; private set; } = new List<NewLine>();
+        public void AddPreferedLine(NewLine preferedLine)
+        {
+            PreferedLines.Add(preferedLine);
+        }
+        public List<NewStepLink> ExecutionHistory => BatchManager.BatchRecordHistory.ToList();
         public Dictionary<ProductDefinition, Amount> TheoricalBatchTime { get; private set; } = new();
         public double _DischargeRate => OutletPump?.NominalFlowRate.GetValue(MassFlowUnits.Kg_sg) ?? 0;
         public NewPump? OutletPump { get; private set; }
         public NewPump? WashingPump { get; set; }
         public Amount CurrentLevel => new Amount(_currentLevel, MassUnits.KiloGram);
-        public double _currentLevel;
+        public void SetCurrentLevel(double level) => _currentLevel = level;
+        private double _currentLevel;
         public Amount OperatorTimeDisabled { get; private set; } = new Amount(0, TimeUnits.Second);
-        public OperatorEngagementType _OperatorOperationType { get; private set; } = OperatorEngagementType.Infinite;
-        public void SetOperationOperatorTime(OperatorEngagementType type, Amount _TimeOperatorOcupy)
-        {
-            _OperatorOperationType = type;
-            OperatorTimeDisabled = _TimeOperatorOcupy;
-        }
-        public NewRecipedInletTank? DestinationVessel { get; private set; }
+        public OperatorEngagementType OperatorOperationType { get; private set; } = OperatorEngagementType.Infinite;
+
+        public NewRecipedInletTank? DestinationVessel { get; set; }
         public WashoutMatrix WashoutRules { get; private set; }
         public ProductDefinition? LastMaterialProcessed { get; set; }
         public NewBatchManager BatchManager { get; private set; }
-        public NewStepLink? CurrentStep => BatchManager.CurrentStep;
+
         public NewMixer(Guid id, string name, ProcessEquipmentType type, FocusFactory focusFactory,
-            WashoutMatrix _WashoutRules)
+            WashoutMatrix _WashoutRules, TransferBatchToMixerCalculation TransferBatchToMixerCalculation, OperatorEngagementType OperatorEngagementType, Amount OperatorTimeDisabled)
            : base(id, name, type, focusFactory)
         {
 
             WashoutRules = _WashoutRules;
-            BatchManager = new NewBatchManager(this);
+            BatchManager = new NewBatchManager(this, TransferBatchToMixerCalculation, OperatorEngagementType, OperatorTimeDisabled);
+            this.OperatorOperationType = OperatorEngagementType;
+            this.OperatorTimeDisabled = OperatorTimeDisabled;
+        }
+        public void SetTransferBatchToMixerCalculation(TransferBatchToMixerCalculation calculationmode)
+        {
+            BatchManager.SetTransferBatchToMixerCalculation(calculationmode);
         }
         public override void CheckInitialStatus(DateTime initialDate)
         {
@@ -53,29 +64,23 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
 
             if (OutletState is not NewManufactureAvailableState)
             {
-                predecessor = _wipTankQueue.Count == 0
-                    ? CurrentMaterial
-                    : _wipTankQueue.Last().CurrentMaterial;
+                predecessor = BatchManager.LastProduct;
 
                 // Alimentamos la cinta del Manager
-                BatchManager.AddOrder(wipTank.CurrentMaterial, predecessor, wipTank);
+                BatchManager.AddOrder(wipTank, predecessor);
 
                 // Guardamos el tanque en la cola física
-                _wipTankQueue.Enqueue(wipTank);
+
             }
             else
             {
                 predecessor = LastMaterialProcessed;
+                DestinationVessel = wipTank;
 
                 // Alimentamos la cinta del Manager
-                BatchManager.AddOrder(wipTank.CurrentMaterial, predecessor, wipTank);
+                BatchManager.AddOrder(wipTank, predecessor);
 
-                // OJO AQUÍ: En lugar de asignar CurrentMaterial a mano...
-                // ...le pedimos al Mixer que ejecute lo que sea que esté de primero en la cinta.
 
-                // Primero vinculamos el tanque (esto es físico, no de tiempo)
-                DestinationVessel = wipTank;
-                wipTank.AssignedMixer = this;
                 // ¡Disparamos la lógica!
                 ExecuteStartLogic(wipTank);
             }
@@ -84,26 +89,29 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
         {
             DestinationVessel!.ReceiveStopDischargFromMixer();
 
-            if (_wipTankQueue.Count > 0)
-            {
-                DestinationVessel = _wipTankQueue.Dequeue();
-                CurrentMaterial = DestinationVessel.CurrentMaterial;
 
-            }
         }
         public override void ReceiveStopCommand()
         {
 
-            if (BatchManager.ActivePipeline.Count == 0)
+            if (BatchManager.BatchQueue.Count == 0)
+            {
+                DestinationVessel = null;
                 TransitionOutletState(new NewManufactureAvailableState(this));
+            }
+
 
         }
 
         protected override void ExecuteStartLogic(NewRecipedInletTank wipTank)
         {
-            TransitionOutletState(new NewManufactureBatchingState(this));
-            CurrentMaterial = wipTank.CurrentMaterial;
+
             BatchManager.StartPipeline();
+            if (BatchManager.CurrentBatch != null)
+            {
+                TransitionOutletState(new NewManufactureBatchingState(this));
+
+            }
         }
         public override void ExecuteProcess()
         {
@@ -122,14 +130,7 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
             else
             {
                 // 1. Verificamos si tengo una orden activa que se está retrasando
-                var currentLink = BatchManager.CurrentStep;
-
-                if (currentLink != null)
-                {
-                    // 2. LA MAGIA DEL TIEMPO ELÁSTICO
-                    // Como el reloj avanza y yo no, empujo la fecha de entrega hacia el futuro.
-                    currentLink.AccumulatedStarvation += 1;
-                }
+                BatchManager.AddStarvation();
             }
         }
         public bool NeedsWashing(ProductDefinition? _last, ProductDefinition? _new)
@@ -140,49 +141,45 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
         protected override void AddSpecificReportData(List<NewInstantaneousReport> reportList)
         {
             var batch = BatchManager.CurrentBatch;
-            var currentStep = BatchManager.CurrentStep;
 
+            reportList.Add(new NewInstantaneousReport("Current Level", $"{_currentLevel:F1} kg", IsBold: true, Color: "#2196F3")); // Azul
+            reportList.Add(new NewInstantaneousReport("Current Step", SubStatusMessage, IsBold: true, Color: "#009688")); // Teal
             // --- 1. BLOQUE DE PRODUCTO (Contexto del Lote) ---
             if (batch != null)
             {
                 reportList.Add(new NewInstantaneousReport("Active Batch", batch.ProductName, IsBold: true, Color: "#673AB7")); // Morado
-
+                reportList.Add(new NewInstantaneousReport("Start Date", batch.StartBatchDate.ToString("g"), Color: "#673AB7"));
+                reportList.Add(new NewInstantaneousReport("Theorical End Date", batch.PlannedTheoricalEndBatch.ToString("g"), Color: "#673AB7"));
+                reportList.Add(new NewInstantaneousReport("Expected End Date", batch.PlannedEndBatch.ToString("g"), Color: "#673AB7"));
                 // Tiempos Amount (Teórico vs Real)
-                double theoricalMin = batch.BatchTeorico / 60.0;
-                double realMin = batch.BatchReal / 60.0;
-                double starvedMin = (batch.BatchReal - batch.BatchTeorico) / 60.0;
-                double willbefre = MixerWillbeFreeAt.GetValue(TimeUnits.Minute);
-                reportList.Add(new NewInstantaneousReport("Time Theoretical", $"{theoricalMin:F1} min", Color: "#673AB7"));
-                reportList.Add(new NewInstantaneousReport("Time Accumulated", $"{realMin:F1} min", IsBold: true, Color: "#673AB7"));
+                double theoricalMin = batch.BCT_Theorical.GetValue(TimeUnits.Minute);
+                double expectedMin = batch.BCT_Expected.GetValue(TimeUnits.Minute);
+                double bctcurrent = batch.BCT_Current.GetValue(TimeUnits.Minute);
+                double currentStarved = batch.TimeStarved.GetValue(TimeUnits.Minute);
 
-                if (starvedMin > 0.1)
-                {
-                    reportList.Add(new NewInstantaneousReport("Starved Delay", $"{starvedMin:F1} min", Color: "#F44336")); // Rojo si hay retraso
+                reportList.Add(new NewInstantaneousReport("BCT Theoretical", $"{theoricalMin:F1} min", Color: "#673AB7"));
+                reportList.Add(new NewInstantaneousReport("BCT Current", $"{bctcurrent:F1} min", IsBold: true, Color: "#673AB7"));
+                reportList.Add(new NewInstantaneousReport("Starved Delay", $"{currentStarved:F1} min", Color: "#F44336")); // Rojo si hay retraso
+                reportList.Add(new NewInstantaneousReport("BCT Expected", $"{expectedMin:F1} min", Color: "#673AB7"));
 
-                }
-                reportList.Add(new NewInstantaneousReport("Will be available in", $"{willbefre:F1} min", IsBold: false, Color: "#673AB7"));
+
+                reportList.Add(new NewInstantaneousReport("%AU Batch", $"{batch.AU_Performance:F1} %", Color: "#F44336")); // Rojo si hay retraso
             }
             else
             {
                 reportList.Add(new NewInstantaneousReport("Product", "IDLE / STANDBY", Color: "#9E9E9E")); // Gris
             }
+            if (BatchManager.BatchRecordHistory.Count > 0)
+            {
+                reportList.Add(new NewInstantaneousReport("%AU Mixer", $"{BatchManager.AU_Performance:F1} %", Color: "#F44336")); // Rojo si hay retraso
+            }
 
             // --- 2. BLOQUE FÍSICO (Nivel y Rendimiento) ---
-            reportList.Add(new NewInstantaneousReport("Current Level", $"{_currentLevel:F1} kg", IsBold: true, Color: "#2196F3")); // Azul
+
 
             // Lógica de Semáforo para Utilización (AU)
-            double util = this.Utilization;
-            string colorUtil = util >= 80 ? "#4CAF50" : (util >= 50 ? "#FFC107" : "#F44336");
-            reportList.Add(new NewInstantaneousReport("Utilization (AU)", $"{util:F1}%", IsBold: true, Color: colorUtil));
 
-            // --- 3. BLOQUE DE EJECUCIÓN (El Paso Actual) ---
-            if (currentStep != null)
-            {
-                reportList.Add(new NewInstantaneousReport("Current Step", currentStep.GetSubStatusMessage(), IsBold: true, Color: "#009688")); // Teal
 
-                // Fecha estimada de liberación de ESTA orden
-                reportList.Add(new NewInstantaneousReport("Batch Ends At", CurrentBatchReleaseTime.ToShortTimeString(), Color: "#009688"));
-            }
 
             // --- 4. BLOQUE LOGÍSTICO (Cola y Destino) ---
             if (DestinationVessel != null)
@@ -190,46 +187,38 @@ namespace GeminiSimulator.NewFilesSimulations.ManufactureEquipments
                 reportList.Add(new NewInstantaneousReport("Destination", $"-> {DestinationVessel.Name}", Color: "#FF9800")); // Naranja
             }
 
-            if (_wipTankQueue.Count > 0)
+            if (BatchManager.BatchQueue.Count > 0)
             {
-                reportList.Add(new NewInstantaneousReport("Pipeline Queue", $"{_wipTankQueue.Count} Batches Waiting", IsBold: true, Color: "#E91E63")); // Rosa
+                int VesselCount = 1;
+                reportList.Add(new NewInstantaneousReport("Queue", $"{BatchManager.BatchQueue.Count} Vessels Waiting", IsBold: true, Color: "#E91E63")); // Rosa
+                foreach (var item in BatchManager.BatchQueue)
+                {
+                    reportList.Add(new NewInstantaneousReport($"{VesselCount}", item.Vessel.Name, IsBold: true, Color: "#E91E63")); // Rosa
+                    VesselCount++;
+                }
+
 
                 // Cuándo quedará libre el mixer de TODA la cola
-                reportList.Add(new NewInstantaneousReport("Mixer Free At", MixerProjectedFreeTime.ToShortTimeString(), Color: "#E91E63"));
+
             }
+            double mixerfree = MixerWillbeFreeAt.GetValue(TimeUnits.Minute);
+            reportList.Add(new NewInstantaneousReport("Mixer Free At Date", MixerProjectedFreeTime.ToString("g"), Color: "#E91E63"));
+            reportList.Add(new NewInstantaneousReport("Mixer Free At Time", $"{mixerfree:F1} min", IsBold: true, Color: "#673AB7"));
         }
         public DateTime MixerProjectedFreeTime => BatchManager.MixerProjectedFreeTime;
 
         // Propiedad privada auxiliar (opcional, o puedes poner la lógica directa abajo)
-        private TimeSpan _mixerTimeSpan => MixerProjectedFreeTime - CurrentDate;
 
-        public Amount MixerWillbeFreeAt
-        {
-            get
-            {
-                double seconds = _mixerTimeSpan.TotalSeconds;
 
-                // PROTECCIÓN: Si ya pasó la fecha (es negativo), devolvemos 0.
-                // Significa "Estoy libre YA".
-                if (seconds < 0) seconds = 0;
+        public Amount MixerWillbeFreeAt => BatchManager.TotalTimeUntilFree;
+        public DateTime CurrentBatchReleaseTime => BatchManager.CurrentBatchProjectedEndDate;
+        public Amount CurrentBatchRealTime => BatchManager.CurrentBatchRealTime;
 
-                return new Amount(seconds, TimeUnits.Second);
-            }
-        }
-        public override DateTime CurrentBatchReleaseTime
-        {
-            get
-            {
-
-                return BatchManager.CurrentBatchProjectedEnd;     //necesito ayuda para saber el batche actual que fecha se libera
-            }
-        }
+        public string SubStatusMessage => BatchManager.SubStatusMessage;
+        public string StatusMessage => BatchManager.StatusMessage;
+        // Añade esto dentro de public class NewMixer
+        public double Progress => BatchManager.CurrentBatchProgress;
     }
-
-
-
-
-
 
 
 

@@ -1,4 +1,6 @@
-﻿namespace GeminiSimulator.NewFilesSimulations.BaseClasss
+﻿using GeminiSimulator.NewFilesSimulations.Tanks;
+
+namespace GeminiSimulator.NewFilesSimulations.BaseClasss
 {
     public interface IGlobalStated : IState
     {
@@ -20,67 +22,33 @@
             if (_unit.IsOnPlannedBreak(_unit.CurrentDate))
             {
                 _unit.TransitionGlobalState(new GlobalState_Maintenance(_unit));
-                foreach (var slave in _unit.Outputs.OfType<NewPlantUnit>())
+                if (_unit is NewProcessTank tank)
                 {
-                    if (slave.Name.Contains("G"))
+                    foreach (var slave in _unit.Outputs.OfType<NewPlantUnit>())
                     {
+                        if (slave.Name.Contains("G"))
+                        {
 
-                    }
-                    // Solo bloqueamos si el esclavo está intentando trabajar
-                    if (slave.GlobalState.IsOperational)
-                    {
-                        slave.TransitionGlobalState(new GlobalState_SlaveBlocked(slave, _unit, $"{_unit.Name} Planned downtime"));
+                        }
+                        // Solo bloqueamos si el esclavo está intentando trabajar
+                        if (slave.GlobalState.IsOperational)
+                        {
+                            slave.TransitionGlobalState(new GlobalState_SlaveBlocked(slave, _unit, $"{_unit.Name} Planned downtime"));
+                        }
                     }
                 }
+                else if (_unit.CurrentOwner != null)
+                {
+                    if (_unit.CurrentOwner.GlobalState.IsOperational)
+                    {
+                        _unit.CurrentOwner.TransitionGlobalState(new GlobalState_SlaveBlocked(_unit.CurrentOwner, _unit, $"{_unit.Name} Planned downtime"));
+                    }
+                }
+                
                 return;
             }
 
-            // --- REGLA B (Corregida) ---
-            //if (_unit.CurrentOwner != null && !_unit.CurrentOwner.GlobalState.IsOperational)
-            //{
-            //    // Usamos .Name para un mensaje limpio en la UI
-            //    string reason = $"{_unit.CurrentOwner.Name} Inactive";
-
-            //    _unit.TransitionGlobalState(new GlobalState_SlaveBlocked(_unit, reason));
-
-            //    foreach (var slave in _unit.Outputs.OfType<NewPlantUnit>())
-            //    {
-            //        if (slave.GlobalState.IsOperational)
-            //        {
-            //            slave.TransitionGlobalState(new GlobalState_SlaveBlocked(slave, reason));
-            //        }
-            //    }
-            //}
-            // A. REGLA SUPREMA: Paradas Programadas
-            //if (_unit.IsOnPlannedBreak(_unit.CurrentDate))
-            //{
-            //    _unit.TransitionGlobalState(new GlobalState_Maintenance(_unit));
-            //    foreach (var slave in _unit.Outputs.OfType<NewPlantUnit>())
-            //    {
-
-            //        slave.TransitionGlobalState(new GlobalState_SlaveBlocked(slave, $"{_unit.Name} Planned downtime"));
-
-
-            //    }
-            //    return;
-            //}
-
-            //// B. REGLA DEL ESCLAVO: Si tengo dueño (soy bomba) y él se para/duerme, yo me bloqueo.
-            //// Nota: Esto hace que si el Mixer se pone en "Waiting" (Naranja), la bomba también se ponga Naranja (Blocked).
-            //if (_unit.CurrentOwner != null && !_unit.CurrentOwner.GlobalState.IsOperational)
-            //{
-            //    _unit.TransitionGlobalState(new GlobalState_SlaveBlocked(_unit, $"{_unit.CurrentOwner} Global Starved"));
-            //    foreach (var slave in _unit.Outputs.OfType<NewPlantUnit>())
-            //    {
-            //        if (slave.Name.Contains("G"))
-            //        {
-
-            //        }
-            //        slave.TransitionGlobalState(new GlobalState_SlaveBlocked(slave, $"{_unit.CurrentOwner} Global starved"));
-
-
-            //    }
-            //}
+       
         }
     }
 

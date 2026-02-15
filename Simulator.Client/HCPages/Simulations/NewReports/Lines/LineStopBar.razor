@@ -1,0 +1,17 @@
+﻿<div class="d-flex flex-column mb-4">
+    <div class="d-flex justify-space-between align-end mb-1">
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icon" Style="@($"color: {Color};")" Size="Size.Small" Class="mr-2" />
+            <MudText Typo="Typo.caption" Style="font-weight: 800; color: #546e7a;">@Label.ToUpper()</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Style="font-weight: 900;">@Value.ToString("N0") <span style="font-size: 10px;">SEC</span></MudText>
+    </div>
+    <MudProgressLinear Color=" MudBlazor.Color.Default" Value="@Value" Max="@Math.Max(Value, 1200)"
+                       Style="@($"background-color: {Color}22; color: {Color}; height: 6px; border-radius: 3px;")" />
+</div>
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public double Value { get; set; }
+    [Parameter] public string Color { get; set; } = "#000";
+    [Parameter] public string Icon { get; set; } = "";
+}

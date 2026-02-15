@@ -1,4 +1,5 @@
-﻿using QWENShared.DTOS.BaseEquipments;
+﻿using MudBlazor;
+using QWENShared.DTOS.BaseEquipments;
 using QWENShared.DTOS.Conectors;
 
 namespace Simulator.Client.HCPages.Conectors.OutletConnectors

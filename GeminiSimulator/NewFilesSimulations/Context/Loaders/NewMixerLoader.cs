@@ -24,7 +24,7 @@ namespace GeminiSimulator.WashoutMatrixs
             foreach (var dto in data.Mixers)
             {
                 // 1. Instanciar
-                var mixer = new NewMixer(dto.Id, dto.Name, dto.EquipmentType, dto.FocusFactory,_context.WashoutRules);
+                var mixer = new NewMixer(dto.Id, dto.Name, dto.EquipmentType, dto.FocusFactory, _context.WashoutRules, _context.BatchTransferCalculationModel, _context.OperatorEngagementType, _context.TimeOperatorOcupy);
 
                 // 2. Mapear Propiedades Comunes (Conectores, Paradas, Capacidades)
                 // Nota: Podríamos extraer esto a un Helper, pero por ahora lo dejo explícito.

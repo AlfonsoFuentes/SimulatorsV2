@@ -1,0 +1,18 @@
+﻿<MudExpansionPanel Class="border border-solid mud-border-primary mb-2">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudIcon Icon="@Icons.Material.Filled.PrecisionManufacturing" Size="Size.Small" Color="@(System.IsViable? Color.Success: Color.Error)" />
+            <MudText Typo="Typo.h6" Style="font-size: 0.9rem;">@System.Name.ToUpper()</MudText>
+            <MudSpacer />
+            <MudText Typo="Typo.caption" Style="font-weight: bold;" Color="@(System.IsViable? Color.Success: Color.Error)">
+                @(System.IsViable ? $"BCT: {System.TheoricalBCT.Value:F1} MIN" : "BLOCKED")
+            </MudText>
+        </MudStack>
+    </TitleContent>
+    <ChildContent>
+        <ViabilityIngredientTable Ingredients="System.Ingredients" />
+    </ChildContent>
+</MudExpansionPanel>
+@code {
+    [Parameter] public ManufactureReport System { get; set; } = new();
+}

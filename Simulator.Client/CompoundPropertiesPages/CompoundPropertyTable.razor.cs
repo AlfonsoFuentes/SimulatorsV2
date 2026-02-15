@@ -1,4 +1,5 @@
-﻿using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
+﻿using MudBlazor;
+using Simulator.Client.Infrastructure.Managers.ClientCRUDServices;
 using Simulator.Shared.Models.CompoundProperties;
 using Simulator.Shared.NewModels.Compounds;
 

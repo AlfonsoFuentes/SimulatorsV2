@@ -1,0 +1,31 @@
+﻿@* Componente: OrderViabilitySection.razor *@
+<div class="ml-4 mb-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" />
+        <MudText Typo="Typo.h6" Style="font-size: 1rem;">@Order.SkuName</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">| @Order.PlannedCases.ToString("N0") CASES</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight: bold;">| MAT: @Order.MaterialName</MudText>
+    </MudStack>
+
+    <div class="ml-8 mt-2">
+        @* Logística WIP *@
+        <MudStack Row="true" Spacing="1" Class="mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Warehouse" Size="Size.Small" />
+            <MudText Typo="Typo.caption" Style="font-weight: bold;">WIP ROUTE:</MudText>
+            <MudText Typo="Typo.caption" Color="@(Order.PotentialSystems.Any(s => s.IsViable) ? Color.Success : Color.Error)">
+                @(Order.PotentialSystems.Any(s => s.IsViable) ? "VERIFIED" : "NO PATH DETECTED")
+            </MudText>
+        </MudStack>
+
+        <MudExpansionPanels MultiExpansion="true" Elevation="0">
+            @foreach (var sys in Order.PotentialSystems)
+            {
+                <ManufactureSystemPanel System="sys" />
+            }
+        </MudExpansionPanels>
+    </div>
+</div>
+
+@code {
+    [Parameter] public OrderReport Order { get; set; } = new();
+}

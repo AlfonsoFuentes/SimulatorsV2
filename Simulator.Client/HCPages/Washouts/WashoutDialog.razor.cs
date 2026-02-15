@@ -1,3 +1,4 @@
+using MudBlazor;
 using QWENShared.DTOS.Washouts;
 
 namespace Simulator.Client.HCPages.Washouts;

@@ -1,0 +1,118 @@
+﻿@* Componente: ViabilityIngredientTable.razor *@
+@using MudBlazor
+
+<MudSimpleTable Dense="true" Hover="true" Elevation="0" Class="border mt-2">
+    <thead>
+        <tr>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">TASK / INGREDIENT</MudText></th>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">TARGET MASS</MudText></th>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">TIME</MudText></th>
+            <th><MudText Typo="Typo.caption" Style="font-weight: bold;">SUPPLY SOURCE</MudText></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var ing in Ingredients)
+        {
+            <tr>
+                <td>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        @* Iconografía dinámica basada en el tipo de paso *@
+                        <MudIcon Icon="@GetStepIcon(ing)"
+                                 Size="Size.Small"
+                                 Color="@(ing.IsConnected ? Color.Default : Color.Error)"
+                                 Style="font-size: 1.1rem;" />
+                        <MudText Typo="Typo.caption" Style="@(ing.IsManual ? "font-weight:bold;" : "")">
+                            @ing.Name.ToUpper()
+                        </MudText>
+                    </MudStack>
+                </td>
+                <td>
+                    <MudText Typo="Typo.caption">
+                        @(ing.Mass != null ? ing.Mass.ToString() : "---")
+                    </MudText>
+                </td>
+                <td>
+                    <MudText Typo="Typo.caption">
+                        @ing.Time.Value.ToString("F1") min
+                    </MudText>
+                </td>
+                <td>
+                    @if (ing.IsConnected)
+                    {
+                        @if (ing.IsManual)
+                        {
+                            @* Visualización para carga manual por operario *@
+                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Info" Style="font-size: 1rem;" />
+                                <MudText Typo="Typo.caption" Color="Color.Info" Style="font-weight: bold;">
+                                    @ing.Status.ToUpper()
+                                </MudText>
+                            </MudStack>
+                        }
+                        else if (ing.AvailablePaths != null && ing.AvailablePaths.Any())
+                        {
+                            @* "Detalle menor": Solo mostrar menú si hay rutas de bombeo reales *@
+                            <MudMenu Label="VIEW PUMPS/TANKS"
+                                     Size="Size.Small"
+                                     Variant="Variant.Text"
+                                     EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                                     Dense="true"
+                                     Color="Color.Primary">
+                                @foreach (var path in ing.AvailablePaths)
+                                {
+                                    <MudMenuItem Disabled="true">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.caption" Style="font-weight: bold; color: #333;">
+                                                @path.PumpName.ToUpper() (@path.NominalFlow.ToString("F1") kg/min)
+                                            </MudText>
+                                            @foreach (var tank in path.ConnectedTanks)
+                                            {
+                                                <MudText Typo="Typo.caption" Class="ml-3" Style="color: #666;">
+                                                    • @tank.ToUpper()
+                                                </MudText>
+                                            }
+                                        </MudStack>
+                                    </MudMenuItem>
+                                }
+                            </MudMenu>
+                        }
+                        else
+                        {
+                            @* Para pasos de Agitación, Análisis, etc. (No mostrar tanques) *@
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="font-style: italic;">
+                                @ing.Status.ToUpper()
+                            </MudText>
+                        }
+                    }
+                    else
+                    {
+                        @* Error de conexión o falta de fuente *@
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                            <MudText Typo="Typo.caption" Color="Color.Error" Style="font-weight: bold;">
+                                @ing.Status.ToUpper()
+                            </MudText>
+                        </MudStack>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+@code {
+    [Parameter] public List<IngredientCheck> Ingredients { get; set; } = new();
+
+    private string GetStepIcon(IngredientCheck ing)
+    {
+        if (!ing.IsConnected) return Icons.Material.Filled.Block;
+        if (ing.IsManual) return Icons.Material.Filled.BackHand;
+        
+        // Si tiene rutas de bombeo, es una adición automática
+        if (ing.AvailablePaths != null && ing.AvailablePaths.Any())
+            return Icons.Material.Filled.PrecisionManufacturing;
+
+        // Por defecto, paso de proceso (engranaje)
+        return Icons.Material.Filled.Settings;
+    }
+}

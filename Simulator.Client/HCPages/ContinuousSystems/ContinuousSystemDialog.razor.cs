@@ -1,3 +1,4 @@
+using MudBlazor;
 using QWENShared.DTOS.ContinuousSystems;
 
 namespace Simulator.Client.HCPages.ContinuousSystems;

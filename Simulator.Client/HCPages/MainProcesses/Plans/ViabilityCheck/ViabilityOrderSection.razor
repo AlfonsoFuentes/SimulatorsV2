@@ -1,0 +1,18 @@
+﻿<div class="ml-4 mb-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" />
+        <MudText Typo="Typo.h6" Style="font-size: 1rem;">@Order.SkuName</MudText>
+        <MudText Typo="Typo.caption">| @Order.PlannedCases CASES | MAT: @Order.MaterialName</MudText>
+    </MudStack>
+    <div class="ml-8 mt-2">
+        <MudExpansionPanels MultiExpansion="true" Elevation="0">
+            @foreach (var sys in Order.PotentialSystems)
+            {
+                <ViabilityMixerPanel System="sys" />
+            }
+        </MudExpansionPanels>
+    </div>
+</div>
+@code {
+    [Parameter] public OrderReport Order { get; set; } = new();
+}

@@ -1,29 +1,29 @@
-﻿using GeminiSimulator.Main;
-using GeminiSimulator.Materials;
+﻿using GeminiSimulator.Materials;
 using GeminiSimulator.NewFilesSimulations.BaseClasss;
+using GeminiSimulator.NewFilesSimulations.Context.CheckAvailability;
 using GeminiSimulator.NewFilesSimulations.ManufactureEquipments;
 using GeminiSimulator.NewFilesSimulations.Operators;
 using GeminiSimulator.NewFilesSimulations.PackageLines;
 using GeminiSimulator.NewFilesSimulations.Tanks;
-using GeminiSimulator.Plans;
 using GeminiSimulator.PlantUnits.ManufacturingEquipments.Mixers;
-using GeminiSimulator.PlantUnits.ManufacturingEquipments.Skids;
-using GeminiSimulator.PlantUnits.PumpsAndFeeder.Operators;
-using GeminiSimulator.PlantUnits.PumpsAndFeeder.Pumps;
-using GeminiSimulator.PlantUnits.StreamJoiners;
 using GeminiSimulator.SKUs;
 using GeminiSimulator.WashoutMatrixs;
-using QWENShared.DTOS.Materials;
-using Simulator.Shared.Simulations;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using UnitSystem;
 
 namespace GeminiSimulator.NewFilesSimulations.Context
 {
+    public enum TransferBatchToMixerCalculation
+    {
+        Automatic,
+        Manual
+    }
     public class NewSimulationContext
     {
+
+
+        public NewSimulationBuilder Builder { get; set; } = null!;
+
+        public NewSimulationEngine Engine { get; set; } = null!;
         public TimeSpan TotalSimulationSpan { get; set; } = TimeSpan.FromSeconds(0);
         public Dictionary<Guid, ProductDefinition> Products { get; } = new();
         public Dictionary<Guid, SkuDefinition> Skus { get; } = new();
@@ -34,22 +34,22 @@ namespace GeminiSimulator.NewFilesSimulations.Context
         // --- 2. DATOS DE ESCENARIO (Configuración dinámica del plan) ---
         // Puede ser nulo si aún no se ha cargado la Fase 2
         public NewSimulationScenario? Scenario { get; set; }
+        public TransferBatchToMixerCalculation BatchTransferCalculationModel { get; private set; } = TransferBatchToMixerCalculation.Manual;
 
-        public OperatorEngagementType OperatorEngagementType { get; private set; } = OperatorEngagementType.StartOnDefinedTime;
-        public Amount TimeOperatorOcupy { get; private set; } = new Amount(10, TimeUnits.Minute);
-        public void SetOperationOperatorTime(OperatorEngagementType type, Amount _TimeOperatorOcupy)
+        public void SetBatchTrasnferCalculationModel(TransferBatchToMixerCalculation _BatchTrasnferCalculationModel)
         {
-            OperatorEngagementType = type;
-            TimeOperatorOcupy = _TimeOperatorOcupy;
-            foreach (var mixer in Mixers.ToList())
+            BatchTransferCalculationModel = _BatchTrasnferCalculationModel;
+            foreach (var mixer in Mixers)
             {
-                mixer.SetOperationOperatorTime(type, _TimeOperatorOcupy);
+                mixer.SetTransferBatchToMixerCalculation(BatchTransferCalculationModel);
             }
-            foreach (var newoperator in Operators.ToList())
-            {
-                newoperator.SetOperationOperatorTime(type, _TimeOperatorOcupy);
-            }
+            Builder.PropagateMixerBatchCycletime();
+            Engine.SetCalculationModel(_BatchTrasnferCalculationModel);
+
         }
+        public OperatorEngagementType OperatorEngagementType { get; private set; } = OperatorEngagementType.Infinite;
+        public Amount TimeOperatorOcupy { get; private set; } = new Amount(10, TimeUnits.Minute);
+
 
 
         // --- 3. LA ESTRATEGIA HÍBRIDA DE EQUIPOS ---
@@ -140,7 +140,7 @@ namespace GeminiSimulator.NewFilesSimulations.Context
             }
 
             // 2. Al Índice Específico (Pattern Matching)
-           
+
         }
 
         /// <summary>
@@ -154,7 +154,172 @@ namespace GeminiSimulator.NewFilesSimulations.Context
         {
             return Products.TryGetValue(id, out var unit) ? unit : null;
         }
+        public PlanValidationReport GetDetailedViabilityReport()
+        {
+            var report = new PlanValidationReport();
 
+            foreach (var line in Lines)
+            {
+                // --- VALIDACIÓN INICIAL: LÍNEA VACÍA ---
+                if (!line.ProductionQueue.Any()) continue;
+
+                // Si hay órdenes, la línea entra al reporte. 
+                // Se asume viable (READY) hasta que una validación física falle.
+                var lineRep = new LineReport
+                {
+                    LineName = line.Name,
+                    IsLineViable = true
+                };
+
+                foreach (var order in line.ProductionQueue)
+                {
+                    var oRep = new OrderReport { SkuName = order.SkuName, PlannedCases = order.PlannedCases };
+
+                    // --- NIVEL 0: VALIDACIÓN DE MATERIAL ---
+                    if (order.Material == null)
+                    {
+                        lineRep.IsLineViable = false;
+                        oRep.MaterialName = "[UNDEFINED]";
+                        oRep.PotentialSystems.Add(new ManufactureReport { Name = "DATA ERROR", IsViable = false, SummaryMessage = "❌ FATAL: Material not defined for this SKU." });
+                        lineRep.Orders.Add(oRep);
+                        continue;
+                    }
+                    oRep.MaterialName = order.Material.Name;
+
+                    // --- NIVEL 1: LINE -> INLET PUMPS ---
+                    var inletPumps = line.Inputs.OfType<NewPump>().ToList();
+                    if (!inletPumps.Any())
+                    {
+                        lineRep.IsLineViable = false;
+                        oRep.PotentialSystems.Add(new ManufactureReport { Name = "LINE ERROR", IsViable = false, SummaryMessage = $"❌ Error: No Inlet Pumps connected to {line.Name}." });
+                        lineRep.Orders.Add(oRep);
+                        continue;
+                    }
+
+                    // --- NIVEL 2: PUMPS -> WIP TANKS ---
+                    var wipTanks = inletPumps.SelectMany(p => p.Inputs.OfType<NewWipTank>()).Distinct().ToList();
+                    if (!wipTanks.Any())
+                    {
+                        lineRep.IsLineViable = false;
+                        oRep.PotentialSystems.Add(new ManufactureReport { Name = "PUMP ERROR", IsViable = false, SummaryMessage = "❌ Error: Inlet Pumps are not feeding any WIP Tank." });
+                        lineRep.Orders.Add(oRep);
+                        continue;
+                    }
+
+                    // --- NIVEL 3: WIP -> MIXERS (RUTA DUAL: DIRECTO O BOMBEADO) ---
+                    var directMixers = wipTanks.SelectMany(w => w.Inputs.OfType<NewManufacture>());
+                    var pumpedMixers = wipTanks.SelectMany(w => w.Inputs.OfType<NewPump>()).SelectMany(p => p.Inputs.OfType<NewManufacture>());
+
+                    var candidateMixers = directMixers.Concat(pumpedMixers)
+                        .Where(m => m.SupportedProducts.Any(p => p.Id == order.Material.Id))
+                        .Distinct().ToList();
+
+                    if (!candidateMixers.Any())
+                    {
+                        lineRep.IsLineViable = false;
+                        oRep.PotentialSystems.Add(new ManufactureReport { Name = "WIP ERROR", IsViable = false, SummaryMessage = $"❌ Error: No path to a compatible Mixer for {order.Material.Name}." });
+                        lineRep.Orders.Add(oRep);
+                        continue;
+                    }
+
+                    // --- NIVEL 4: AUDITORÍA INTERNA DEL MIXER ---
+                    foreach (var mixer in candidateMixers)
+                    {
+                        var mRep = new ManufactureReport { Name = mixer.Name, IsViable = true };
+
+                        // VERIFICACIÓN DE DICCIONARIO: ¿Existe BatchSize para este material?
+                        if (!mixer.ProductCapabilities.ContainsKey(order.Material))
+                        {
+                            mRep.IsViable = false;
+                            mRep.SummaryMessage = $"❌ Data Error: {mixer.Name} lacks a Batch Size definition for {order.Material.Name}.";
+                            lineRep.IsLineViable = false;
+                            oRep.PotentialSystems.Add(mRep);
+                            continue;
+                        }
+
+                        double batchSize = mixer.ProductCapabilities[order.Material].GetValue(MassUnits.KiloGram);
+                        double accumulatedMinutes = 0;
+
+                        foreach (var step in order.Material.RecipeSteps.OrderBy(x => x.Order).ToList())
+                        {
+                            var ingCheck = new IngredientCheck();
+
+
+
+                            if (step.IsMaterialAddition)
+                            {
+                                // CORRECCIÓN: Etiquetado de adición
+                                ingCheck.Name = $"Add {step.IngredientName}";
+
+                                // A. Búsqueda Automática
+                                var relevantPumps = mixer.Inputs.OfType<NewPump>().Where(p =>
+                                    p.SupportedProducts.Any(sp => sp.Id == step.IngredientId)).ToList();
+
+                                foreach (var pump in relevantPumps)
+                                {
+                                    var path = new PumpPath { PumpName = pump.Name, NominalFlow = pump.NominalFlowRate.GetValue(MassFlowUnits.Kg_min) };
+                                    path.ConnectedTanks = pump.Inputs.OfType<NewProcessTank>()
+                                        .Where(t => t.SupportedProducts.Any(sp => sp.Id == step.IngredientId))
+                                        .Select(t => t.Name).ToList();
+
+                                    if (path.ConnectedTanks.Any()) ingCheck.AvailablePaths.Add(path);
+                                }
+
+                                if (ingCheck.AvailablePaths.Any())
+                                {
+                                    ingCheck.IsConnected = true;
+                                    var primary = ingCheck.AvailablePaths.First();
+                                    double targetMass = (step.TargetPercentage / 100.0) * batchSize;
+                                    double min = targetMass / primary.NominalFlow;
+
+                                    ingCheck.Mass = new Amount(targetMass, MassUnits.KiloGram);
+                                    ingCheck.Time = new Amount(min, TimeUnits.Minute);
+                                    ingCheck.Status = "✅ Automatic";
+                                    accumulatedMinutes += min;
+                                }
+                                // B. Búsqueda Manual (1 Kg/s)
+                                else if (mixer.Inputs.OfType<NewOperator>().Any())
+                                {
+                                    ingCheck.IsConnected = true;
+                                    ingCheck.IsManual = true;
+                                    double targetMass = (step.TargetPercentage / 100.0) * batchSize;
+                                    double manualMin = targetMass / 60.0;
+
+                                    ingCheck.Mass = new Amount(targetMass, MassUnits.KiloGram);
+                                    ingCheck.Time = new Amount(manualMin, TimeUnits.Minute);
+                                    ingCheck.Status = "👤 Manual (1 Kg/s)";
+                                    accumulatedMinutes += manualMin;
+                                }
+                                else
+                                {
+                                    ingCheck.IsConnected = false;
+                                    mRep.IsViable = false;
+                                    ingCheck.Status = "❌ NO SOURCE";
+                                }
+                            }
+                            else
+                            {
+                                // CORRECCIÓN: Etiquetado de pasos de proceso (Agitación, Análisis, etc.)
+                                ingCheck.Name = $"{step.OperationType}";
+                                ingCheck.IsConnected = true;
+                                ingCheck.Time = step.Duration;
+                                ingCheck.Status = "⚙️ Process Step";
+                                accumulatedMinutes += step.Duration.GetValue(TimeUnits.Minute);
+                            }
+                            mRep.Ingredients.Add(ingCheck);
+                        }
+
+                        mRep.TheoricalBCT = new Amount(accumulatedMinutes, TimeUnits.Minute);
+                        if (!mRep.IsViable) lineRep.IsLineViable = false;
+                        mRep.SummaryMessage = mRep.IsViable ? $"Verified. BCT: {accumulatedMinutes:F1} min." : "Blocked: Missing Raw Material or Operator.";
+                        oRep.PotentialSystems.Add(mRep);
+                    }
+                    lineRep.Orders.Add(oRep);
+                }
+                report.Lines.Add(lineRep);
+            }
+            return report;
+        }
     }
 
 

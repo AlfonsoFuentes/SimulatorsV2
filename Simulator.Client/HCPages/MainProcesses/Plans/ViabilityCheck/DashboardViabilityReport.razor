@@ -1,0 +1,21 @@
+﻿
+
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h5" Class="mb-6">PLANT VIABILITY AUDIT</MudText>
+
+    @if (Report != null)
+    {
+        @foreach (var line in Report.Lines)
+        {
+            <ViabilityLineCard Line="line" />
+        }
+    }
+</MudContainer>
+
+    @code {
+    [Parameter]
+    public PlanValidationReport Report { get; set; } = null!;
+   
+   
+}
